@@ -50,14 +50,20 @@ function formatTime(timestamp) {
     return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
-        hour12: false
+        hour12: false,
+        timeZone: 'America/New_York'
     });
 }
 
 function formatDate(timestamp) {
     const date = new Date(timestamp);
     const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
+
+    // Compare dates in EST
+    const estOptions = { timeZone: 'America/New_York' };
+    const dateEST = date.toLocaleDateString('en-US', estOptions);
+    const nowEST = now.toLocaleDateString('en-US', estOptions);
+    const isToday = dateEST === nowEST;
 
     if (isToday) {
         return formatTime(timestamp);
@@ -68,7 +74,8 @@ function formatDate(timestamp) {
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-        hour12: false
+        hour12: false,
+        timeZone: 'America/New_York'
     });
 }
 
