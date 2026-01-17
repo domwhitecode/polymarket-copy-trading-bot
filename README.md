@@ -56,11 +56,31 @@ Start the web dashboard to monitor trades, view positions, and manage settings:
 npm run ui
 ```
 
-Open http://localhost:3000 to access the dashboard. Features include:
-- **Real-time trade feed** - See executed trades as they happen
-- **Open positions** - View current positions with PnL
-- **Close positions** - Manually close positions from the UI
-- **Settings** - Edit bot configuration without restarting
+Open http://localhost:3000 to access the dashboard.
+
+#### Dashboard Features
+
+| Feature | Description |
+|---------|-------------|
+| **Real-time Trade Feed** | Live updates via Server-Sent Events (SSE) showing executed trades as they happen. Click any trade to open the market on Polymarket. |
+| **Open Positions** | Sortable table displaying all positions with market icons, current price, value, and PnL (both $ and %). Click any row to view the market. |
+| **Close Positions** | Close individual positions with a percentage selector (25%, 50%, 75%, 100%) or enter a custom amount. Shows real-time progress and results. |
+| **Close All Positions** | Bulk close all open positions with a confirmation modal and live progress tracking for each position. |
+| **Redeem Resolved** | Automatically redeem winning positions from resolved markets with progress tracking. |
+| **Settings** | Edit bot configuration (traders, copy strategy, multipliers, order sizes) directly from the UI. Changes are saved to `.env`. |
+| **Tracked Traders** | View list of traders being copied with links to their Polymarket profiles. |
+| **Balance Display** | Shows your wallet address and current USDC balance with manual refresh. |
+
+#### Configuration
+
+The dashboard runs on port 3000 by default. To change:
+
+```bash
+# In .env
+UI_PORT=3001
+```
+
+> **Note:** The dashboard connects to the same MongoDB database as the main bot to display trade history. Make sure MongoDB is accessible.
 
 ## Features
 
