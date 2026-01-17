@@ -219,4 +219,113 @@ router.post('/close-all', async (req, res) => {
     }
 });
 
+// GET /api/positions/close-all/stream - SSE endpoint for closing all positions with real-time updates
+router.get('/close-all/stream', async (req, res) => {
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const sendEvent = (event: string, data: object) => {
+        res.write(`event: ${event}\n`);
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    try {
+        const positions = await fetchPositions();
+
+        if (positions.length === 0) {
+            sendEvent('complete', {
+                success: true,
+                closedCount: 0,
+                failedCount: 0,
+                totalValue: 0,
+                message: 'No positions to close',
+            });
+            res.end();
+            return;
+        }
+
+        // Send initial data with all positions
+        sendEvent('init', {
+            total: positions.length,
+            positions: positions.map(p => ({
+                asset: p.asset,
+                title: p.title,
+                outcome: p.outcome,
+                value: p.currentValue,
+            })),
+        });
+
+        let closedCount = 0;
+        let failedCount = 0;
+        let totalValue = 0;
+
+        for (let i = 0; i < positions.length; i++) {
+            const position = positions[i];
+
+            // Send "closing" event
+            sendEvent('closing', {
+                index: i,
+                asset: position.asset,
+                title: position.title,
+            });
+
+            const result = await closePosition(position.asset, 100);
+
+            if (result.success) {
+                closedCount++;
+                totalValue += result.totalValue;
+                sendEvent('closed', {
+                    index: i,
+                    asset: position.asset,
+                    title: position.title,
+                    success: true,
+                    tokensSold: result.tokensSold,
+                    value: result.totalValue,
+                    closedCount,
+                    failedCount,
+                    totalValue,
+                });
+            } else {
+                failedCount++;
+                sendEvent('closed', {
+                    index: i,
+                    asset: position.asset,
+                    title: position.title,
+                    success: false,
+                    error: result.error,
+                    closedCount,
+                    failedCount,
+                    totalValue,
+                });
+            }
+
+            // Small delay between closes
+            if (i < positions.length - 1) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+            }
+        }
+
+        // Send completion event
+        sendEvent('complete', {
+            success: closedCount > 0 || positions.length === 0,
+            closedCount,
+            failedCount,
+            totalValue,
+            message: `Closed ${closedCount}/${positions.length} positions for $${totalValue.toFixed(2)}`,
+        });
+
+        res.end();
+    } catch (error) {
+        console.error('Error in close-all stream:', error);
+        sendEvent('error', {
+            error: 'Failed to close positions',
+            message: error instanceof Error ? error.message : 'Unknown error',
+        });
+        res.end();
+    }
+});
+
 export default router;

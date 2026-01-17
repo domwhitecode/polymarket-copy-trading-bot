@@ -203,6 +203,14 @@ function sortPositions(positionsToSort) {
                 aVal = a.size || 0;
                 bVal = b.size || 0;
                 break;
+            case 'avgPrice':
+                aVal = a.avgPrice || 0;
+                bVal = b.avgPrice || 0;
+                break;
+            case 'curPrice':
+                aVal = a.curPrice || 0;
+                bVal = b.curPrice || 0;
+                break;
             case 'value':
                 aVal = a.currentValue || 0;
                 bVal = b.currentValue || 0;
@@ -237,7 +245,7 @@ function renderPositions() {
     updateSortIcons();
 
     if (positions.length === 0) {
-        positionsBodyEl.innerHTML = '<tr><td colspan="6" class="empty-state">No open positions</td></tr>';
+        positionsBodyEl.innerHTML = '<tr><td colspan="8" class="empty-state">No open positions</td></tr>';
         return;
     }
 
@@ -251,6 +259,9 @@ function renderPositions() {
         const marketUrl = pos.eventSlug ? `https://polymarket.com/event/${pos.eventSlug}` : '';
         const clickableClass = marketUrl ? 'clickable-row' : '';
         const iconHtml = pos.icon ? `<img src="${pos.icon}" alt="" class="market-icon" onerror="this.style.display='none'">` : '';
+        const avgPrice = pos.avgPrice || 0;
+        const curPrice = pos.curPrice || 0;
+        const priceChangeClass = curPrice > avgPrice ? 'pnl-positive' : curPrice < avgPrice ? 'pnl-negative' : '';
 
         return `
             <tr class="${clickableClass}" data-url="${marketUrl}">
@@ -260,6 +271,8 @@ function renderPositions() {
                 </td>
                 <td>${pos.outcome || '-'}</td>
                 <td>${(pos.size || 0).toFixed(2)}</td>
+                <td>$${avgPrice.toFixed(2)}</td>
+                <td class="${priceChangeClass}">$${curPrice.toFixed(2)}</td>
                 <td>${formatCurrency(pos.currentValue || 0)}</td>
                 <td class="${pnlClass}">${pnlSign}${formatCurrency(pnlValue)} (${pnlSign}${pnlPercent.toFixed(1)}%)</td>
                 <td>
@@ -621,36 +634,155 @@ closeAllBtn.addEventListener('click', () => {
 });
 
 // Close All modal functions
+const closeAllConfirmState = document.getElementById('close-all-confirm-state');
+const closeAllLoadingState = document.getElementById('close-all-loading-state');
+const closeAllProgressText = document.getElementById('close-all-progress');
+const closeAllProgressBar = document.getElementById('close-all-progress-bar');
+const closeAllDetail = document.getElementById('close-all-detail');
+const closeAllFooter = document.getElementById('close-all-footer');
+const closeAllModalCloseBtn = document.getElementById('close-all-modal-close-btn');
+const closeAllPositionsList = document.getElementById('close-all-positions-list');
+
+let closeAllEventSource = null;
+
 function closeCloseAllModal() {
+    // Close SSE connection if active
+    if (closeAllEventSource) {
+        closeAllEventSource.close();
+        closeAllEventSource = null;
+    }
     closeAllModal.classList.remove('active');
+    // Reset to confirmation state
+    closeAllConfirmState.style.display = 'block';
+    closeAllLoadingState.style.display = 'none';
+    closeAllFooter.style.display = 'flex';
+    closeAllModalCloseBtn.style.display = 'block';
+    closeAllProgressBar.style.width = '0%';
+    closeAllPositionsList.innerHTML = '';
+}
+
+function showCloseAllLoading() {
+    closeAllConfirmState.style.display = 'none';
+    closeAllLoadingState.style.display = 'flex';
+    closeAllFooter.style.display = 'none';
+    closeAllModalCloseBtn.style.display = 'none';
+    closeAllProgressText.textContent = 'Initializing...';
+    closeAllDetail.textContent = 'Connecting...';
+    closeAllProgressBar.style.width = '0%';
+    closeAllPositionsList.innerHTML = '';
+}
+
+function updateCloseAllProgress(completed, total) {
+    const percent = Math.round((completed / total) * 100);
+    closeAllProgressBar.style.width = `${percent}%`;
+    closeAllDetail.textContent = `${completed} / ${total} completed`;
+}
+
+function renderCloseAllPositions(positionsData) {
+    closeAllPositionsList.innerHTML = positionsData.map((pos, index) => `
+        <div class="close-all-position-item" data-index="${index}">
+            <div class="close-all-position-info">
+                <span class="close-all-position-title" title="${pos.title}">${truncate(pos.title, 30)}</span>
+                <span class="close-all-position-outcome">${pos.outcome || '-'} • ${formatCurrency(pos.value || 0)}</span>
+            </div>
+            <div class="close-all-position-status pending" data-status="pending">
+                <span class="status-text">Pending</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updatePositionStatus(index, status, value = null, error = null) {
+    const item = closeAllPositionsList.querySelector(`[data-index="${index}"]`);
+    if (!item) return;
+
+    const statusEl = item.querySelector('.close-all-position-status');
+    statusEl.className = `close-all-position-status ${status}`;
+
+    if (status === 'closing') {
+        statusEl.innerHTML = `<div class="status-spinner"></div><span class="status-text">Closing...</span>`;
+    } else if (status === 'success') {
+        const valueText = value !== null ? ` $${value.toFixed(2)}` : '';
+        statusEl.innerHTML = `<span class="status-icon">✓</span><span class="status-text">Closed${valueText}</span>`;
+    } else if (status === 'failed') {
+        statusEl.innerHTML = `<span class="status-icon">✗</span><span class="status-text">Failed</span>`;
+        statusEl.title = error || 'Unknown error';
+    }
+
+    // Scroll to show current item
+    if (status === 'closing') {
+        item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 }
 
 async function confirmCloseAll() {
-    confirmCloseAllBtn.disabled = true;
-    confirmCloseAllBtn.textContent = 'Closing...';
+    showCloseAllLoading();
 
-    try {
-        const response = await fetch('/api/positions/close-all', {
-            method: 'POST',
-        });
-        const result = await response.json();
+    closeAllEventSource = new EventSource('/api/positions/close-all/stream');
+    let totalPositions = 0;
 
-        closeCloseAllModal();
+    closeAllEventSource.addEventListener('init', (e) => {
+        const data = JSON.parse(e.data);
+        totalPositions = data.total;
+        closeAllProgressText.textContent = 'Closing positions...';
+        closeAllDetail.textContent = `0 / ${totalPositions} completed`;
+        renderCloseAllPositions(data.positions);
+    });
 
-        if (result.success) {
-            alert(result.message || 'All positions closed successfully');
-            fetchPositions();
-            fetchBalance();
+    closeAllEventSource.addEventListener('closing', (e) => {
+        const data = JSON.parse(e.data);
+        updatePositionStatus(data.index, 'closing');
+    });
+
+    closeAllEventSource.addEventListener('closed', (e) => {
+        const data = JSON.parse(e.data);
+        if (data.success) {
+            updatePositionStatus(data.index, 'success', data.value);
         } else {
-            alert(`Failed to close all: ${result.error || 'Unknown error'}\nClosed: ${result.closedCount}, Failed: ${result.failedCount}`);
+            updatePositionStatus(data.index, 'failed', null, data.error);
         }
-    } catch (error) {
-        console.error('Error closing all positions:', error);
-        alert('Error closing positions. Please try again.');
-    } finally {
-        confirmCloseAllBtn.disabled = false;
-        confirmCloseAllBtn.textContent = 'Close All Positions';
-    }
+        updateCloseAllProgress(data.closedCount + data.failedCount, totalPositions);
+    });
+
+    closeAllEventSource.addEventListener('complete', (e) => {
+        const data = JSON.parse(e.data);
+        closeAllEventSource.close();
+        closeAllEventSource = null;
+
+        closeAllProgressText.textContent = data.success ? 'Complete!' : 'Completed with errors';
+
+        // Show close button to dismiss
+        closeAllModalCloseBtn.style.display = 'block';
+
+        // Refresh data
+        fetchPositions();
+        fetchBalance();
+    });
+
+    closeAllEventSource.addEventListener('error', (e) => {
+        let errorMsg = 'Connection error';
+        try {
+            const data = JSON.parse(e.data);
+            errorMsg = data.message || data.error || errorMsg;
+        } catch {}
+
+        closeAllProgressText.textContent = 'Error';
+        closeAllDetail.textContent = errorMsg;
+        closeAllModalCloseBtn.style.display = 'block';
+
+        if (closeAllEventSource) {
+            closeAllEventSource.close();
+            closeAllEventSource = null;
+        }
+    });
+
+    closeAllEventSource.onerror = () => {
+        // SSE connection closed (could be normal end or error)
+        if (closeAllEventSource) {
+            closeAllEventSource.close();
+            closeAllEventSource = null;
+        }
+    };
 }
 
 // Close all modal on outside click

@@ -93,6 +93,8 @@
                                 <th>Market</th>
                                 <th>Outcome</th>
                                 <th class="sortable" data-sort="size">Size <span class="sort-icon"></span></th>
+                                <th class="sortable" data-sort="avgPrice">Avg <span class="sort-icon"></span></th>
+                                <th class="sortable" data-sort="curPrice">Price <span class="sort-icon"></span></th>
                                 <th class="sortable" data-sort="value">Value <span class="sort-icon"></span></th>
                                 <th class="sortable" data-sort="pnl">PnL <span class="sort-icon"></span></th>
                                 <th>Action</th>
@@ -100,7 +102,7 @@
                         </thead>
                         <tbody id="positions-body">
                             <tr>
-                                <td colspan="6" class="empty-state">Loading positions...</td>
+                                <td colspan="8" class="empty-state">Loading positions...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -220,16 +222,28 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Close All Positions</h3>
-                <button class="close-btn" onclick="closeCloseAllModal()">&times;</button>
+                <button class="close-btn" id="close-all-modal-close-btn" onclick="closeCloseAllModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="warning-message">
-                    <strong>Warning:</strong> This will close ALL open positions at 100%.
+                <!-- Confirmation state -->
+                <div id="close-all-confirm-state">
+                    <div class="warning-message">
+                        <strong>Warning:</strong> This will close ALL open positions at 100%.
+                    </div>
+                    <p id="close-all-info"></p>
+                    <p class="confirm-text">Are you sure you want to proceed?</p>
                 </div>
-                <p id="close-all-info"></p>
-                <p class="confirm-text">Are you sure you want to proceed?</p>
+                <!-- Loading state -->
+                <div id="close-all-loading-state" class="loading-state" style="display: none;">
+                    <p class="loading-text" id="close-all-progress">Closing positions...</p>
+                    <div class="loading-progress">
+                        <div class="loading-progress-bar" id="close-all-progress-bar"></div>
+                    </div>
+                    <p class="loading-detail" id="close-all-detail">0 / 0 completed</p>
+                    <div class="close-all-positions-list" id="close-all-positions-list"></div>
+                </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" id="close-all-footer">
                 <button class="btn btn-secondary" onclick="closeCloseAllModal()">Cancel</button>
                 <button class="btn btn-danger" id="confirm-close-all-btn" onclick="confirmCloseAll()">Close All Positions</button>
             </div>
