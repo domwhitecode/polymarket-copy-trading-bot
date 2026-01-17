@@ -406,6 +406,42 @@ main {
     color: var(--accent-red);
 }
 
+/* Sortable table headers */
+.sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-right: 18px !important;
+}
+
+.sortable:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-tertiary);
+}
+
+.sort-icon {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.7rem;
+    opacity: 0.5;
+}
+
+.sort-icon::after {
+    content: '⇅';
+}
+
+.sortable.asc .sort-icon::after {
+    content: '↑';
+    opacity: 1;
+}
+
+.sortable.desc .sort-icon::after {
+    content: '↓';
+    opacity: 1;
+}
+
 .btn {
     padding: 0.5rem 1rem;
     border: none;

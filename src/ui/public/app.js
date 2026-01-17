@@ -2,6 +2,8 @@
 let positions = [];
 let currentAsset = null;
 let eventSource = null;
+let sortColumn = 'value'; // default sort by value
+let sortDirection = 'desc'; // default descending
 
 // DOM elements
 const walletEl = document.getElementById('wallet-address');
@@ -192,13 +194,56 @@ document.addEventListener('click', (e) => {
 });
 
 // Render functions
+function sortPositions(positionsToSort) {
+    return [...positionsToSort].sort((a, b) => {
+        let aVal, bVal;
+
+        switch (sortColumn) {
+            case 'size':
+                aVal = a.size || 0;
+                bVal = b.size || 0;
+                break;
+            case 'value':
+                aVal = a.currentValue || 0;
+                bVal = b.currentValue || 0;
+                break;
+            case 'pnl':
+                aVal = a.cashPnl || 0;
+                bVal = b.cashPnl || 0;
+                break;
+            default:
+                aVal = a.currentValue || 0;
+                bVal = b.currentValue || 0;
+        }
+
+        if (sortDirection === 'asc') {
+            return aVal - bVal;
+        } else {
+            return bVal - aVal;
+        }
+    });
+}
+
+function updateSortIcons() {
+    document.querySelectorAll('.sortable').forEach(th => {
+        th.classList.remove('asc', 'desc');
+        if (th.dataset.sort === sortColumn) {
+            th.classList.add(sortDirection);
+        }
+    });
+}
+
 function renderPositions() {
+    updateSortIcons();
+
     if (positions.length === 0) {
         positionsBodyEl.innerHTML = '<tr><td colspan="6" class="empty-state">No open positions</td></tr>';
         return;
     }
 
-    positionsBodyEl.innerHTML = positions.map(pos => {
+    const sortedPositions = sortPositions(positions);
+
+    positionsBodyEl.innerHTML = sortedPositions.map(pos => {
         const pnlValue = pos.cashPnl || 0;
         const pnlPercent = pos.percentPnl || 0;
         const pnlClass = getPnlClass(pnlValue);
@@ -518,6 +563,22 @@ refreshPositionsBtn.addEventListener('click', async () => {
     refreshPositionsBtn.classList.add('spinning');
     await fetchPositions();
     setTimeout(() => refreshPositionsBtn.classList.remove('spinning'), 500);
+});
+
+// Sortable column headers
+document.querySelectorAll('.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+        const column = th.dataset.sort;
+        if (sortColumn === column) {
+            // Toggle direction if same column
+            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            // New column, default to descending
+            sortColumn = column;
+            sortDirection = 'desc';
+        }
+        renderPositions();
+    });
 });
 
 // Redeem resolved positions
