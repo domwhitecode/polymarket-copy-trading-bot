@@ -48,6 +48,20 @@ npm start             # Start trading
 
 **📖 For detailed setup instructions, see [Getting Started Guide](./docs/GETTING_STARTED.md)**
 
+### Web Dashboard
+
+Start the web dashboard to monitor trades, view positions, and manage settings:
+
+```bash
+npm run ui
+```
+
+Open http://localhost:3000 to access the dashboard. Features include:
+- **Real-time trade feed** - See executed trades as they happen
+- **Open positions** - View current positions with PnL
+- **Close positions** - Manually close positions from the UI
+- **Settings** - Edit bot configuration without restarting
+
 ## Features
 
 - **Multi-Trader Support** - Track and copy trades from multiple traders simultaneously

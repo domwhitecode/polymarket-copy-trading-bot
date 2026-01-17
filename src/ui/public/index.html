@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PolyCopy Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>PolyCopy Dashboard</h1>
+            <div class="header-info">
+                <div class="traders-dropdown" id="traders-dropdown">
+                    <button class="traders-btn" id="traders-btn">
+                        <span>Tracking <span id="traders-count">0</span> traders</span>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                            <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                        </svg>
+                    </button>
+                    <div class="traders-menu" id="traders-menu">
+                        <div class="traders-menu-header">Tracked Wallets</div>
+                        <div class="traders-list" id="traders-list">
+                            <p class="empty-state">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+                <button class="settings-btn" id="settings-btn" title="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
+                    </svg>
+                </button>
+                <span id="wallet-address" class="wallet">Loading...</span>
+                <span id="balance" class="balance">$---.--</span>
+                <button class="refresh-btn" id="refresh-balance-btn" title="Refresh Balance">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <section class="panel trades-panel">
+                <h2>Recent Trades</h2>
+                <div class="connection-status" id="connection-status">
+                    <span class="status-dot disconnected"></span>
+                    <span>Disconnected</span>
+                </div>
+                <div class="trades-list" id="trades-list">
+                    <p class="empty-state">No trades yet</p>
+                </div>
+            </section>
+
+            <section class="panel positions-panel">
+                <div class="panel-header">
+                    <h2>Open Positions</h2>
+                    <div class="panel-actions">
+                        <button class="btn btn-sm btn-success" id="redeem-resolved-btn" title="Redeem Resolved Positions">
+                            Redeem Resolved
+                        </button>
+                        <button class="btn btn-sm btn-danger" id="close-all-btn" title="Close All Positions">
+                            Close All
+                        </button>
+                        <button class="refresh-btn" id="refresh-positions-btn" title="Refresh Positions">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="positions-summary" id="positions-summary">
+                    <div class="summary-item">
+                        <span class="label">Total Value</span>
+                        <span class="value" id="total-value">$0.00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Total PnL</span>
+                        <span class="value" id="total-pnl">$0.00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Positions</span>
+                        <span class="value" id="position-count">0</span>
+                    </div>
+                </div>
+                <div class="positions-table-container">
+                    <table class="positions-table" id="positions-table">
+                        <thead>
+                            <tr>
+                                <th>Market</th>
+                                <th>Outcome</th>
+                                <th class="sortable" data-sort="size">Size <span class="sort-icon"></span></th>
+                                <th class="sortable" data-sort="avgPrice">Avg <span class="sort-icon"></span></th>
+                                <th class="sortable" data-sort="curPrice">Price <span class="sort-icon"></span></th>
+                                <th class="sortable" data-sort="value">Value <span class="sort-icon"></span></th>
+                                <th class="sortable" data-sort="pnl">PnL <span class="sort-icon"></span></th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="positions-body">
+                            <tr>
+                                <td colspan="8" class="empty-state">Loading positions...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settings-modal">
+        <div class="modal-content settings-modal-content">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <button class="close-btn" onclick="closeSettingsModal()">&times;</button>
+            </div>
+            <div class="modal-body settings-body">
+                <div class="settings-warning">
+                    Changes require restarting the bot (npm run dev) to take effect.
+                </div>
+
+                <div class="form-group">
+                    <label for="setting-user-addresses">Traders to Copy</label>
+                    <textarea id="setting-user-addresses" rows="3" placeholder="0x123..., 0x456..."></textarea>
+                    <small>Comma-separated wallet addresses</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="setting-copy-strategy">Copy Strategy</label>
+                        <select id="setting-copy-strategy">
+                            <option value="PERCENTAGE">PERCENTAGE</option>
+                            <option value="FIXED">FIXED</option>
+                            <option value="ADAPTIVE">ADAPTIVE</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="setting-copy-size">Copy Size</label>
+                        <input type="number" id="setting-copy-size" step="0.1" min="0" placeholder="10.0">
+                        <small>% for PERCENTAGE, $ for FIXED</small>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="setting-trade-multiplier">Trade Multiplier</label>
+                        <input type="number" id="setting-trade-multiplier" step="0.1" min="0" placeholder="1.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="setting-max-order">Max Order Size ($)</label>
+                        <input type="number" id="setting-max-order" step="1" min="1" placeholder="100">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="setting-min-order">Min Order Size ($)</label>
+                        <input type="number" id="setting-min-order" step="0.1" min="0" placeholder="1.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="setting-fetch-interval">Fetch Interval (sec)</label>
+                        <input type="number" id="setting-fetch-interval" step="1" min="1" placeholder="1">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="setting-retry-limit">Retry Limit</label>
+                        <input type="number" id="setting-retry-limit" step="1" min="1" max="10" placeholder="3">
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="setting-aggregation">
+                            <span>Enable Trade Aggregation</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-message" id="settings-message" style="display: none;"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSettingsModal()">Cancel</button>
+                <button class="btn btn-primary" id="save-settings-btn" onclick="saveSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Close Position Modal -->
+    <div class="modal" id="close-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Close Position</h3>
+                <button class="close-btn" id="close-modal-close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Form state -->
+                <div id="close-form-state">
+                    <p id="modal-market-info"></p>
+                    <div class="form-group">
+                        <label for="close-percentage">Percentage to close:</label>
+                        <div class="percentage-input-group">
+                            <input type="number" id="close-percentage" min="1" max="100" value="100">
+                            <span>%</span>
+                        </div>
+                        <div class="form-error" id="close-form-error" style="display: none;"></div>
+                    </div>
+                    <div class="quick-buttons">
+                        <button onclick="setPercentage(25)">25%</button>
+                        <button onclick="setPercentage(50)">50%</button>
+                        <button onclick="setPercentage(75)">75%</button>
+                        <button onclick="setPercentage(100)">100%</button>
+                    </div>
+                </div>
+                <!-- Loading state -->
+                <div id="close-loading-state" class="loading-state" style="display: none;">
+                    <div class="loading-spinner"></div>
+                    <p class="loading-text" id="close-loading-text">Closing position...</p>
+                    <p class="loading-detail" id="close-loading-detail"></p>
+                </div>
+            </div>
+            <div class="modal-footer" id="close-modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-danger" id="confirm-close-btn" onclick="confirmClose()">Close Position</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Redeem Resolved Modal -->
+    <div class="modal" id="redeem-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Redeem Resolved Positions</h3>
+                <button class="close-btn" id="redeem-modal-close-btn" onclick="closeRedeemModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Confirmation state -->
+                <div id="redeem-confirm-state">
+                    <p id="redeem-info">Checking for redeemable positions...</p>
+                    <p class="confirm-text" id="redeem-confirm-text" style="display: none;">Are you sure you want to redeem these positions?</p>
+                </div>
+                <!-- Loading state -->
+                <div id="redeem-loading-state" class="loading-state" style="display: none;">
+                    <p class="loading-text" id="redeem-progress">Redeeming positions...</p>
+                    <div class="loading-progress">
+                        <div class="loading-progress-bar" id="redeem-progress-bar"></div>
+                    </div>
+                    <p class="loading-detail" id="redeem-detail">0 / 0 completed</p>
+                    <div class="close-all-positions-list" id="redeem-positions-list"></div>
+                </div>
+            </div>
+            <div class="modal-footer" id="redeem-modal-footer">
+                <button class="btn btn-secondary" onclick="closeRedeemModal()">Cancel</button>
+                <button class="btn btn-success" id="confirm-redeem-btn" onclick="confirmRedeem()" disabled>Redeem Positions</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Close All Confirmation Modal -->
+    <div class="modal" id="close-all-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Close All Positions</h3>
+                <button class="close-btn" id="close-all-modal-close-btn" onclick="closeCloseAllModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- No positions state -->
+                <div id="close-all-empty-state" style="display: none;">
+                    <p class="empty-state-message">No positions to close.</p>
+                </div>
+                <!-- Confirmation state -->
+                <div id="close-all-confirm-state">
+                    <div class="warning-message">
+                        <strong>Warning:</strong> This will close ALL open positions at 100%.
+                    </div>
+                    <p id="close-all-info"></p>
+                    <p class="confirm-text">Are you sure you want to proceed?</p>
+                </div>
+                <!-- Loading state -->
+                <div id="close-all-loading-state" class="loading-state" style="display: none;">
+                    <p class="loading-text" id="close-all-progress">Closing positions...</p>
+                    <div class="loading-progress">
+                        <div class="loading-progress-bar" id="close-all-progress-bar"></div>
+                    </div>
+                    <p class="loading-detail" id="close-all-detail">0 / 0 completed</p>
+                    <div class="close-all-positions-list" id="close-all-positions-list"></div>
+                </div>
+            </div>
+            <div class="modal-footer" id="close-all-footer">
+                <button class="btn btn-secondary" onclick="closeCloseAllModal()">Cancel</button>
+                <button class="btn btn-danger" id="confirm-close-all-btn" onclick="confirmCloseAll()">Close All Positions</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

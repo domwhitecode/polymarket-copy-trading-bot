@@ -36,6 +36,7 @@
         "audit": "ts-node src/scripts/auditCopyTradingAlgorithmFixed.ts",
         "audit-old": "ts-node src/scripts/auditCopyTradingAlgorithm.ts",
         "health-check": "ts-node src/scripts/healthCheck.ts",
+        "ui": "ts-node src/ui/server.ts",
         "lint": "eslint .",
         "lint:fix": "eslint --fix .",
         "format": "prettier --write ."
@@ -64,10 +65,12 @@
     },
     "dependencies": {
         "@polymarket/clob-client": "^4.14.0",
+        "@types/express": "^5.0.6",
         "axios": "^1.7.9",
         "chalk": "^5.4.1",
         "dotenv": "^16.4.7",
         "ethers": "^5.8.0",
+        "express": "^5.2.1",
         "moment": "^2.30.1",
         "mongoose": "^8.9.5",
         "ora": "^8.2.0"
