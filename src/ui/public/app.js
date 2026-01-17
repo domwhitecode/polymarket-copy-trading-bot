@@ -27,6 +27,7 @@ const tradersCountEl = document.getElementById('traders-count');
 const settingsModal = document.getElementById('settings-modal');
 const settingsBtn = document.getElementById('settings-btn');
 const saveSettingsBtn = document.getElementById('save-settings-btn');
+const settingsMessage = document.getElementById('settings-message');
 const settingUserAddresses = document.getElementById('setting-user-addresses');
 const settingCopyStrategy = document.getElementById('setting-copy-strategy');
 const settingCopySize = document.getElementById('setting-copy-size');
@@ -384,13 +385,22 @@ function updateConnectionStatus(connected) {
     }
 }
 
+// Single Close Position modal elements
+const closeFormState = document.getElementById('close-form-state');
+const closeLoadingState = document.getElementById('close-loading-state');
+const closeLoadingText = document.getElementById('close-loading-text');
+const closeLoadingDetail = document.getElementById('close-loading-detail');
+const closeModalFooter = document.getElementById('close-modal-footer');
+const closeModalCloseBtn = document.getElementById('close-modal-close-btn');
+const closeFormError = document.getElementById('close-form-error');
+
 // Modal functions
 function openCloseModal(asset) {
     currentAsset = asset;
     const position = positions.find(p => p.asset === asset);
 
     if (!position) {
-        alert('Position not found');
+        // Show error in a temporary way - position should always exist
         return;
     }
 
@@ -401,6 +411,19 @@ function openCloseModal(asset) {
         Current value: ${formatCurrency(position.currentValue || 0)}
     `;
 
+    // Reset to form state
+    closeFormState.style.display = 'block';
+    closeLoadingState.style.display = 'none';
+    closeModalFooter.style.display = 'flex';
+    closeModalCloseBtn.style.display = 'block';
+    closeFormError.style.display = 'none';
+
+    // Reset the spinner (in case it was replaced with result icon)
+    const resultIcon = closeLoadingState.querySelector('.result-icon');
+    if (resultIcon) {
+        resultIcon.outerHTML = '<div class="loading-spinner"></div>';
+    }
+
     closePercentageInput.value = 100;
     modal.classList.add('active');
 }
@@ -408,10 +431,44 @@ function openCloseModal(asset) {
 function closeModal() {
     modal.classList.remove('active');
     currentAsset = null;
+    // Reset states
+    closeFormState.style.display = 'block';
+    closeLoadingState.style.display = 'none';
+    closeModalFooter.style.display = 'flex';
+    closeModalCloseBtn.style.display = 'block';
+    closeFormError.style.display = 'none';
 }
 
 function setPercentage(value) {
     closePercentageInput.value = value;
+    closeFormError.style.display = 'none';
+}
+
+function showCloseFormError(message) {
+    closeFormError.textContent = message;
+    closeFormError.style.display = 'block';
+}
+
+function showCloseLoading(positionTitle) {
+    closeFormState.style.display = 'none';
+    closeLoadingState.style.display = 'flex';
+    closeModalFooter.style.display = 'none';
+    closeModalCloseBtn.style.display = 'none';
+    closeLoadingText.textContent = 'Closing position...';
+    closeLoadingDetail.textContent = truncate(positionTitle, 40);
+}
+
+function showCloseResult(success, message) {
+    closeLoadingText.textContent = success ? 'Position Closed!' : 'Close Failed';
+    closeLoadingDetail.textContent = message;
+    closeModalCloseBtn.style.display = 'block';
+    // Change spinner to checkmark or X
+    const spinner = closeLoadingState.querySelector('.loading-spinner');
+    if (spinner) {
+        spinner.outerHTML = success
+            ? '<span class="result-icon success">✓</span>'
+            : '<span class="result-icon failed">✗</span>';
+    }
 }
 
 async function confirmClose() {
@@ -420,12 +477,12 @@ async function confirmClose() {
     const percentage = parseFloat(closePercentageInput.value);
 
     if (isNaN(percentage) || percentage < 1 || percentage > 100) {
-        alert('Please enter a valid percentage (1-100)');
+        showCloseFormError('Please enter a valid percentage (1-100)');
         return;
     }
 
-    confirmCloseBtn.disabled = true;
-    confirmCloseBtn.textContent = 'Closing...';
+    const position = positions.find(p => p.asset === currentAsset);
+    showCloseLoading(position?.title || 'Unknown');
 
     try {
         const response = await fetch(`/api/positions/${encodeURIComponent(currentAsset)}/close`, {
@@ -439,19 +496,15 @@ async function confirmClose() {
         const result = await response.json();
 
         if (result.success) {
-            alert(result.message || 'Position closed successfully');
-            closeModal();
+            showCloseResult(true, result.message || 'Position closed successfully');
             // Refresh data
             await Promise.all([fetchPositions(), fetchBalance()]);
         } else {
-            alert(`Failed to close position: ${result.error || 'Unknown error'}`);
+            showCloseResult(false, result.error || 'Unknown error');
         }
     } catch (error) {
         console.error('Error closing position:', error);
-        alert('Error closing position. Please try again.');
-    } finally {
-        confirmCloseBtn.disabled = false;
-        confirmCloseBtn.textContent = 'Close Position';
+        showCloseResult(false, 'Network error. Please try again.');
     }
 }
 
@@ -473,16 +526,31 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && closeAllModal.classList.contains('active')) {
         closeCloseAllModal();
     }
+    if (e.key === 'Escape' && redeemModal.classList.contains('active')) {
+        closeRedeemModal();
+    }
 });
 
 // Settings modal functions
+function showSettingsMessage(message, type) {
+    settingsMessage.textContent = message;
+    settingsMessage.className = `settings-message ${type}`;
+    settingsMessage.style.display = 'block';
+}
+
+function hideSettingsMessage() {
+    settingsMessage.style.display = 'none';
+}
+
 function openSettingsModal() {
+    hideSettingsMessage();
     fetchSettings();
     settingsModal.classList.add('active');
 }
 
 function closeSettingsModal() {
     settingsModal.classList.remove('active');
+    hideSettingsMessage();
 }
 
 async function fetchSettings() {
@@ -501,10 +569,11 @@ async function fetchSettings() {
             settingFetchInterval.value = s.FETCH_INTERVAL || '';
             settingRetryLimit.value = s.RETRY_LIMIT || '';
             settingAggregation.checked = s.TRADE_AGGREGATION_ENABLED === 'true';
+            hideSettingsMessage();
         }
     } catch (error) {
         console.error('Error fetching settings:', error);
-        alert('Failed to load settings');
+        showSettingsMessage('Failed to load settings', 'error');
     }
 }
 
@@ -530,6 +599,7 @@ async function saveSettings() {
 
     saveSettingsBtn.disabled = true;
     saveSettingsBtn.textContent = 'Saving...';
+    hideSettingsMessage();
 
     try {
         const response = await fetch('/api/settings', {
@@ -543,16 +613,19 @@ async function saveSettings() {
         const result = await response.json();
 
         if (result.success) {
-            alert(result.message || 'Settings saved successfully');
-            closeSettingsModal();
+            showSettingsMessage(result.message || 'Settings saved successfully!', 'success');
             // Refresh traders list since USER_ADDRESSES may have changed
             fetchTraders();
+            // Close modal after a brief delay to show success message
+            setTimeout(() => {
+                closeSettingsModal();
+            }, 1500);
         } else {
-            alert(`Failed to save settings: ${result.error || result.message || 'Unknown error'}`);
+            showSettingsMessage(`Failed to save: ${result.error || result.message || 'Unknown error'}`, 'error');
         }
     } catch (error) {
         console.error('Error saving settings:', error);
-        alert('Error saving settings. Please try again.');
+        showSettingsMessage('Error saving settings. Please try again.', 'error');
     } finally {
         saveSettingsBtn.disabled = false;
         saveSettingsBtn.textContent = 'Save Settings';
@@ -594,42 +667,225 @@ document.querySelectorAll('.sortable').forEach(th => {
     });
 });
 
-// Redeem resolved positions
+// Redeem modal elements
+const redeemModal = document.getElementById('redeem-modal');
+const redeemConfirmState = document.getElementById('redeem-confirm-state');
+const redeemLoadingState = document.getElementById('redeem-loading-state');
+const redeemInfo = document.getElementById('redeem-info');
+const redeemConfirmText = document.getElementById('redeem-confirm-text');
+const redeemProgressText = document.getElementById('redeem-progress');
+const redeemProgressBar = document.getElementById('redeem-progress-bar');
+const redeemDetail = document.getElementById('redeem-detail');
+const redeemPositionsList = document.getElementById('redeem-positions-list');
+const redeemModalFooter = document.getElementById('redeem-modal-footer');
+const redeemModalCloseBtn = document.getElementById('redeem-modal-close-btn');
+const confirmRedeemBtn = document.getElementById('confirm-redeem-btn');
+
+let redeemEventSource = null;
+
+// Redeem resolved positions - open modal
 redeemResolvedBtn.addEventListener('click', async () => {
-    redeemResolvedBtn.disabled = true;
-    redeemResolvedBtn.textContent = 'Redeeming...';
+    // Reset modal state
+    redeemConfirmState.style.display = 'block';
+    redeemLoadingState.style.display = 'none';
+    redeemModalFooter.style.display = 'flex';
+    redeemModalCloseBtn.style.display = 'block';
+    redeemInfo.textContent = 'Checking for redeemable positions...';
+    redeemConfirmText.style.display = 'none';
+    confirmRedeemBtn.disabled = true;
+    redeemPositionsList.innerHTML = '';
+    redeemProgressBar.style.width = '0%';
 
+    redeemModal.classList.add('active');
+
+    // Fetch redeemable positions
     try {
-        const response = await fetch('/api/positions/redeem-resolved', {
-            method: 'POST',
-        });
-        const result = await response.json();
+        const response = await fetch('/api/positions/redeemable');
+        const data = await response.json();
 
-        if (result.success) {
-            alert(result.message || 'Positions redeemed successfully');
-            fetchPositions();
-            fetchBalance();
+        if (data.count === 0) {
+            redeemInfo.textContent = 'No positions available to redeem.';
+            confirmRedeemBtn.disabled = true;
         } else {
-            alert(`Failed to redeem: ${result.error || 'Unknown error'}`);
+            redeemInfo.innerHTML = `Found <strong>${data.count}</strong> redeemable position(s) worth approximately <strong>${formatCurrency(data.totalValue)}</strong>.`;
+            redeemConfirmText.style.display = 'block';
+            confirmRedeemBtn.disabled = false;
         }
     } catch (error) {
-        console.error('Error redeeming positions:', error);
-        alert('Error redeeming positions. Please try again.');
-    } finally {
-        redeemResolvedBtn.disabled = false;
-        redeemResolvedBtn.textContent = 'Redeem Resolved';
+        console.error('Error fetching redeemable:', error);
+        redeemInfo.textContent = 'Error checking for redeemable positions.';
     }
 });
 
-// Close All button - open confirmation modal
-closeAllBtn.addEventListener('click', () => {
-    if (positions.length === 0) {
-        alert('No positions to close');
-        return;
+function closeRedeemModal() {
+    if (redeemEventSource) {
+        redeemEventSource.close();
+        redeemEventSource = null;
+    }
+    redeemModal.classList.remove('active');
+    // Reset states
+    redeemConfirmState.style.display = 'block';
+    redeemLoadingState.style.display = 'none';
+    redeemModalFooter.style.display = 'flex';
+    redeemModalCloseBtn.style.display = 'block';
+    redeemPositionsList.innerHTML = '';
+    redeemProgressBar.style.width = '0%';
+}
+
+function showRedeemLoading() {
+    redeemConfirmState.style.display = 'none';
+    redeemLoadingState.style.display = 'flex';
+    redeemModalFooter.style.display = 'none';
+    redeemModalCloseBtn.style.display = 'none';
+    redeemProgressText.textContent = 'Initializing...';
+    redeemDetail.textContent = 'Connecting...';
+    redeemProgressBar.style.width = '0%';
+    redeemPositionsList.innerHTML = '';
+}
+
+function updateRedeemProgress(completed, total) {
+    const percent = Math.round((completed / total) * 100);
+    redeemProgressBar.style.width = `${percent}%`;
+    redeemDetail.textContent = `${completed} / ${total} completed`;
+}
+
+function renderRedeemPositions(positionsData) {
+    redeemPositionsList.innerHTML = positionsData.map((pos, index) => `
+        <div class="close-all-position-item" data-redeem-index="${index}">
+            <div class="close-all-position-info">
+                <span class="close-all-position-title" title="${pos.title}">${truncate(pos.title, 30)}</span>
+                <span class="close-all-position-outcome">${pos.outcome || '-'} • ${formatCurrency(pos.value || 0)}</span>
+            </div>
+            <div class="close-all-position-status pending" data-status="pending">
+                <span class="status-text">Pending</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updateRedeemPositionStatus(index, status, value = null, error = null) {
+    const item = redeemPositionsList.querySelector(`[data-redeem-index="${index}"]`);
+    if (!item) return;
+
+    const statusEl = item.querySelector('.close-all-position-status');
+    statusEl.className = `close-all-position-status ${status}`;
+
+    if (status === 'closing') {
+        statusEl.innerHTML = `<div class="status-spinner"></div><span class="status-text">Redeeming...</span>`;
+    } else if (status === 'success') {
+        const valueText = value !== null ? ` $${value.toFixed(2)}` : '';
+        statusEl.innerHTML = `<span class="status-icon">✓</span><span class="status-text">Redeemed${valueText}</span>`;
+    } else if (status === 'failed') {
+        statusEl.innerHTML = `<span class="status-icon">✗</span><span class="status-text">Failed</span>`;
+        statusEl.title = error || 'Unknown error';
     }
 
-    const totalValue = positions.reduce((sum, p) => sum + (p.currentValue || 0), 0);
-    closeAllInfoEl.textContent = `You have ${positions.length} position(s) with a total value of ${formatCurrency(totalValue)}.`;
+    if (status === 'closing') {
+        item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+async function confirmRedeem() {
+    showRedeemLoading();
+
+    redeemEventSource = new EventSource('/api/positions/redeem-resolved/stream');
+    let totalPositions = 0;
+
+    redeemEventSource.addEventListener('init', (e) => {
+        const data = JSON.parse(e.data);
+        totalPositions = data.total;
+        redeemProgressText.textContent = 'Redeeming positions...';
+        redeemDetail.textContent = `0 / ${totalPositions} completed`;
+        renderRedeemPositions(data.positions);
+    });
+
+    redeemEventSource.addEventListener('redeeming', (e) => {
+        const data = JSON.parse(e.data);
+        updateRedeemPositionStatus(data.index, 'closing');
+    });
+
+    redeemEventSource.addEventListener('redeemed', (e) => {
+        const data = JSON.parse(e.data);
+        if (data.success) {
+            updateRedeemPositionStatus(data.index, 'success', data.value);
+        } else {
+            updateRedeemPositionStatus(data.index, 'failed', null, data.error);
+        }
+        updateRedeemProgress(data.redeemedCount + data.failedCount, totalPositions);
+    });
+
+    redeemEventSource.addEventListener('complete', (e) => {
+        const data = JSON.parse(e.data);
+        redeemEventSource.close();
+        redeemEventSource = null;
+
+        redeemProgressText.textContent = data.success ? 'Complete!' : 'Completed with errors';
+
+        // Show close button
+        redeemModalCloseBtn.style.display = 'block';
+
+        // Refresh data
+        fetchPositions();
+        fetchBalance();
+    });
+
+    redeemEventSource.addEventListener('error', (e) => {
+        let errorMsg = 'Connection error';
+        try {
+            const data = JSON.parse(e.data);
+            errorMsg = data.message || data.error || errorMsg;
+        } catch {}
+
+        redeemProgressText.textContent = 'Error';
+        redeemDetail.textContent = errorMsg;
+        redeemModalCloseBtn.style.display = 'block';
+
+        if (redeemEventSource) {
+            redeemEventSource.close();
+            redeemEventSource = null;
+        }
+    });
+
+    redeemEventSource.onerror = () => {
+        if (redeemEventSource) {
+            redeemEventSource.close();
+            redeemEventSource = null;
+        }
+    };
+}
+
+// Redeem modal on outside click
+redeemModal.addEventListener('click', (e) => {
+    if (e.target === redeemModal) {
+        closeRedeemModal();
+    }
+});
+
+// Close All modal empty state element
+const closeAllEmptyState = document.getElementById('close-all-empty-state');
+
+// Close All button - open confirmation modal
+closeAllBtn.addEventListener('click', () => {
+    // Reset states
+    closeAllConfirmState.style.display = 'none';
+    closeAllEmptyState.style.display = 'none';
+    closeAllLoadingState.style.display = 'none';
+    closeAllModalCloseBtn.style.display = 'block';
+    closeAllProgressBar.style.width = '0%';
+    closeAllPositionsList.innerHTML = '';
+
+    if (positions.length === 0) {
+        // Show empty state in modal
+        closeAllEmptyState.style.display = 'block';
+        closeAllFooter.style.display = 'none';
+    } else {
+        // Show confirmation state
+        closeAllConfirmState.style.display = 'block';
+        closeAllFooter.style.display = 'flex';
+        const totalValue = positions.reduce((sum, p) => sum + (p.currentValue || 0), 0);
+        closeAllInfoEl.textContent = `You have ${positions.length} position(s) with a total value of ${formatCurrency(totalValue)}.`;
+    }
+
     closeAllModal.classList.add('active');
 });
 
@@ -652,8 +908,9 @@ function closeCloseAllModal() {
         closeAllEventSource = null;
     }
     closeAllModal.classList.remove('active');
-    // Reset to confirmation state
+    // Reset states
     closeAllConfirmState.style.display = 'block';
+    closeAllEmptyState.style.display = 'none';
     closeAllLoadingState.style.display = 'none';
     closeAllFooter.style.display = 'flex';
     closeAllModalCloseBtn.style.display = 'block';

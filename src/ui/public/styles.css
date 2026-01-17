@@ -997,3 +997,68 @@ main {
 .status-icon {
     font-size: 1rem;
 }
+
+/* Result icons for single close modal */
+.result-icon {
+    font-size: 48px;
+    margin-bottom: 1rem;
+}
+
+.result-icon.success {
+    color: var(--accent-green);
+}
+
+.result-icon.failed {
+    color: var(--accent-red);
+}
+
+/* Form validation errors */
+.form-error {
+    color: var(--accent-red);
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background-color: rgba(248, 81, 73, 0.1);
+    border-radius: 4px;
+}
+
+/* Modal error message */
+.modal-error {
+    background-color: rgba(248, 81, 73, 0.15);
+    border: 1px solid var(--accent-red);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    color: var(--accent-red);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+/* Settings message (success/error) */
+.settings-message {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin: 0 1.5rem 1rem;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.settings-message.success {
+    background-color: rgba(63, 185, 80, 0.15);
+    border: 1px solid var(--accent-green);
+    color: var(--accent-green);
+}
+
+.settings-message.error {
+    background-color: rgba(248, 81, 73, 0.15);
+    border: 1px solid var(--accent-red);
+    color: var(--accent-red);
+}
+
+/* Empty state message for modals */
+.empty-state-message {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 1.5rem 0;
+    font-size: 1rem;
+}

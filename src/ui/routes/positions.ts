@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { fetchPositions, closePosition } from '../services/positionService';
-import { redeemAllResolved, getRedeemablePositions } from '../services/redeemService';
+import { redeemAllResolved, getRedeemablePositions, redeemAllResolvedWithProgress } from '../services/redeemService';
 
 const router = Router();
 
@@ -322,6 +322,95 @@ router.get('/close-all/stream', async (req, res) => {
         console.error('Error in close-all stream:', error);
         sendEvent('error', {
             error: 'Failed to close positions',
+            message: error instanceof Error ? error.message : 'Unknown error',
+        });
+        res.end();
+    }
+});
+
+// GET /api/positions/redeem-resolved/stream - SSE endpoint for redeeming positions with real-time updates
+router.get('/redeem-resolved/stream', async (req, res) => {
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const sendEvent = (event: string, data: object) => {
+        res.write(`event: ${event}\n`);
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    let redeemedCount = 0;
+    let failedCount = 0;
+    let totalValue = 0;
+
+    try {
+        const result = await redeemAllResolvedWithProgress({
+            onInit: (positions) => {
+                if (positions.length === 0) {
+                    sendEvent('complete', {
+                        success: true,
+                        redeemedCount: 0,
+                        failedCount: 0,
+                        totalValue: 0,
+                        message: 'No positions to redeem',
+                    });
+                    return;
+                }
+                sendEvent('init', {
+                    total: positions.length,
+                    positions: positions.map(p => ({
+                        conditionId: p.conditionId,
+                        title: p.title,
+                        outcome: p.outcome,
+                        value: p.value,
+                    })),
+                });
+            },
+            onRedeeming: (index, position) => {
+                sendEvent('redeeming', {
+                    index,
+                    conditionId: position.conditionId,
+                    title: position.title,
+                });
+            },
+            onRedeemed: (index, position, success, error) => {
+                if (success) {
+                    redeemedCount++;
+                    totalValue += position.value;
+                } else {
+                    failedCount++;
+                }
+                sendEvent('redeemed', {
+                    index,
+                    conditionId: position.conditionId,
+                    title: position.title,
+                    success,
+                    value: position.value,
+                    error,
+                    redeemedCount,
+                    failedCount,
+                    totalValue,
+                });
+            },
+        });
+
+        sendEvent('complete', {
+            success: result.success,
+            redeemedCount: result.redeemedCount,
+            failedCount: result.failedCount,
+            totalValue: result.totalValue,
+            message: result.redeemedCount > 0
+                ? `Redeemed ${result.redeemedCount} position(s) for ~$${result.totalValue.toFixed(2)}`
+                : result.error || 'No positions to redeem',
+        });
+
+        res.end();
+    } catch (error) {
+        console.error('Error in redeem-resolved stream:', error);
+        sendEvent('error', {
+            error: 'Failed to redeem positions',
             message: error instanceof Error ? error.message : 'Unknown error',
         });
         res.end();

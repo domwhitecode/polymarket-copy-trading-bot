@@ -127,6 +127,126 @@ export async function getRedeemablePositions(): Promise<{
     };
 }
 
+export interface RedeemablePosition {
+    conditionId: string;
+    title: string;
+    outcome: string;
+    value: number;
+}
+
+export interface RedeemProgressCallback {
+    onInit: (positions: RedeemablePosition[]) => void;
+    onRedeeming: (index: number, position: RedeemablePosition) => void;
+    onRedeemed: (index: number, position: RedeemablePosition, success: boolean, error?: string) => void;
+}
+
+export async function redeemAllResolvedWithProgress(
+    callbacks: RedeemProgressCallback
+): Promise<RedeemResult> {
+    const result: RedeemResult = {
+        success: false,
+        redeemedCount: 0,
+        failedCount: 0,
+        totalValue: 0,
+        details: [],
+    };
+
+    try {
+        const allPositions = await loadPositions(PROXY_WALLET);
+
+        const redeemablePositions = allPositions.filter(
+            (pos) =>
+                (pos.curPrice >= RESOLVED_HIGH || pos.curPrice <= RESOLVED_LOW) &&
+                pos.redeemable === true
+        );
+
+        if (redeemablePositions.length === 0) {
+            result.success = true;
+            result.error = 'No positions to redeem';
+            return result;
+        }
+
+        // Setup provider and signer
+        const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+        const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+        const ctfContract = new ethers.Contract(CTF_CONTRACT_ADDRESS, CTF_ABI, wallet);
+
+        // Group positions by conditionId
+        const positionsByCondition = new Map<string, Position[]>();
+        redeemablePositions.forEach((pos) => {
+            const existing = positionsByCondition.get(pos.conditionId) || [];
+            existing.push(pos);
+            positionsByCondition.set(pos.conditionId, existing);
+        });
+
+        // Build the redeemable positions list for init
+        const redeemableList: RedeemablePosition[] = [];
+        for (const [conditionId, positions] of Array.from(positionsByCondition.entries())) {
+            const totalPositionValue = positions.reduce(
+                (sum, pos) => sum + pos.currentValue,
+                0
+            );
+            redeemableList.push({
+                conditionId,
+                title: positions[0].title || positions[0].slug || conditionId,
+                outcome: positions[0].outcome || '-',
+                value: totalPositionValue,
+            });
+        }
+
+        callbacks.onInit(redeemableList);
+
+        let index = 0;
+        for (const [conditionId, positions] of Array.from(positionsByCondition.entries())) {
+            const totalPositionValue = positions.reduce(
+                (sum, pos) => sum + pos.currentValue,
+                0
+            );
+            const title = positions[0].title || positions[0].slug || conditionId;
+            const redeemablePos = redeemableList[index];
+
+            callbacks.onRedeeming(index, redeemablePos);
+
+            const redeemResult = await redeemPosition(ctfContract, positions[0]);
+
+            if (redeemResult.success) {
+                result.redeemedCount++;
+                result.totalValue += totalPositionValue;
+                result.details.push({
+                    conditionId,
+                    title,
+                    success: true,
+                    value: totalPositionValue,
+                });
+                callbacks.onRedeemed(index, redeemablePos, true);
+            } else {
+                result.failedCount++;
+                result.details.push({
+                    conditionId,
+                    title,
+                    success: false,
+                    value: totalPositionValue,
+                    error: redeemResult.error,
+                });
+                callbacks.onRedeemed(index, redeemablePos, false, redeemResult.error);
+            }
+
+            index++;
+
+            // Small delay between transactions
+            if (index < redeemableList.length) {
+                await new Promise((resolve) => setTimeout(resolve, 2000));
+            }
+        }
+
+        result.success = result.redeemedCount > 0 || result.failedCount === 0;
+    } catch (error: any) {
+        result.error = error.message || String(error);
+    }
+
+    return result;
+}
+
 export async function redeemAllResolved(): Promise<RedeemResult> {
     const result: RedeemResult = {
         success: false,

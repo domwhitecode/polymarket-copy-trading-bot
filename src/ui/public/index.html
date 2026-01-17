@@ -180,6 +180,7 @@
                     </div>
                 </div>
             </div>
+            <div class="settings-message" id="settings-message" style="display: none;"></div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeSettingsModal()">Cancel</button>
                 <button class="btn btn-primary" id="save-settings-btn" onclick="saveSettings()">Save Settings</button>
@@ -192,27 +193,67 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Close Position</h3>
-                <button class="close-btn" onclick="closeModal()">&times;</button>
+                <button class="close-btn" id="close-modal-close-btn" onclick="closeModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <p id="modal-market-info"></p>
-                <div class="form-group">
-                    <label for="close-percentage">Percentage to close:</label>
-                    <div class="percentage-input-group">
-                        <input type="number" id="close-percentage" min="1" max="100" value="100">
-                        <span>%</span>
+                <!-- Form state -->
+                <div id="close-form-state">
+                    <p id="modal-market-info"></p>
+                    <div class="form-group">
+                        <label for="close-percentage">Percentage to close:</label>
+                        <div class="percentage-input-group">
+                            <input type="number" id="close-percentage" min="1" max="100" value="100">
+                            <span>%</span>
+                        </div>
+                        <div class="form-error" id="close-form-error" style="display: none;"></div>
+                    </div>
+                    <div class="quick-buttons">
+                        <button onclick="setPercentage(25)">25%</button>
+                        <button onclick="setPercentage(50)">50%</button>
+                        <button onclick="setPercentage(75)">75%</button>
+                        <button onclick="setPercentage(100)">100%</button>
                     </div>
                 </div>
-                <div class="quick-buttons">
-                    <button onclick="setPercentage(25)">25%</button>
-                    <button onclick="setPercentage(50)">50%</button>
-                    <button onclick="setPercentage(75)">75%</button>
-                    <button onclick="setPercentage(100)">100%</button>
+                <!-- Loading state -->
+                <div id="close-loading-state" class="loading-state" style="display: none;">
+                    <div class="loading-spinner"></div>
+                    <p class="loading-text" id="close-loading-text">Closing position...</p>
+                    <p class="loading-detail" id="close-loading-detail"></p>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" id="close-modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
                 <button class="btn btn-danger" id="confirm-close-btn" onclick="confirmClose()">Close Position</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Redeem Resolved Modal -->
+    <div class="modal" id="redeem-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Redeem Resolved Positions</h3>
+                <button class="close-btn" id="redeem-modal-close-btn" onclick="closeRedeemModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Confirmation state -->
+                <div id="redeem-confirm-state">
+                    <p id="redeem-info">Checking for redeemable positions...</p>
+                    <p class="confirm-text" id="redeem-confirm-text" style="display: none;">Are you sure you want to redeem these positions?</p>
+                </div>
+                <!-- Loading state -->
+                <div id="redeem-loading-state" class="loading-state" style="display: none;">
+                    <p class="loading-text" id="redeem-progress">Redeeming positions...</p>
+                    <div class="loading-progress">
+                        <div class="loading-progress-bar" id="redeem-progress-bar"></div>
+                    </div>
+                    <p class="loading-detail" id="redeem-detail">0 / 0 completed</p>
+                    <div class="close-all-positions-list" id="redeem-positions-list"></div>
+                </div>
+            </div>
+            <div class="modal-footer" id="redeem-modal-footer">
+                <button class="btn btn-secondary" onclick="closeRedeemModal()">Cancel</button>
+                <button class="btn btn-success" id="confirm-redeem-btn" onclick="confirmRedeem()" disabled>Redeem Positions</button>
             </div>
         </div>
     </div>
@@ -225,6 +266,10 @@
                 <button class="close-btn" id="close-all-modal-close-btn" onclick="closeCloseAllModal()">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- No positions state -->
+                <div id="close-all-empty-state" style="display: none;">
+                    <p class="empty-state-message">No positions to close.</p>
+                </div>
                 <!-- Confirmation state -->
                 <div id="close-all-confirm-state">
                     <div class="warning-message">
