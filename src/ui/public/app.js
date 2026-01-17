@@ -35,6 +35,10 @@ const settingFetchInterval = document.getElementById('setting-fetch-interval');
 const settingRetryLimit = document.getElementById('setting-retry-limit');
 const settingAggregation = document.getElementById('setting-aggregation');
 
+// Refresh buttons
+const refreshBalanceBtn = document.getElementById('refresh-balance-btn');
+const refreshPositionsBtn = document.getElementById('refresh-positions-btn');
+
 // Utility functions
 function formatAddress(address) {
     if (!address) return 'Unknown';
@@ -192,20 +196,36 @@ function renderPositions() {
         const pnlPercent = pos.percentPnl || 0;
         const pnlClass = getPnlClass(pnlValue);
         const pnlSign = pnlValue >= 0 ? '+' : '';
+        const marketUrl = pos.eventSlug ? `https://polymarket.com/event/${pos.eventSlug}` : '';
+        const clickableClass = marketUrl ? 'clickable-row' : '';
+        const iconHtml = pos.icon ? `<img src="${pos.icon}" alt="" class="market-icon" onerror="this.style.display='none'">` : '';
 
         return `
-            <tr>
-                <td class="market-cell" title="${pos.title || 'Unknown'}">${truncate(pos.title || 'Unknown', 30)}</td>
+            <tr class="${clickableClass}" data-url="${marketUrl}">
+                <td class="market-cell" title="${pos.title || 'Unknown'}">
+                    ${iconHtml}
+                    <span>${truncate(pos.title || 'Unknown', 25)}</span>
+                </td>
                 <td>${pos.outcome || '-'}</td>
                 <td>${(pos.size || 0).toFixed(2)}</td>
                 <td>${formatCurrency(pos.currentValue || 0)}</td>
                 <td class="${pnlClass}">${pnlSign}${formatCurrency(pnlValue)} (${pnlSign}${pnlPercent.toFixed(1)}%)</td>
                 <td>
-                    <button class="btn btn-close" onclick="openCloseModal('${pos.asset}')">Close</button>
+                    <button class="btn btn-close" onclick="event.stopPropagation(); openCloseModal('${pos.asset}')">Close</button>
                 </td>
             </tr>
         `;
     }).join('');
+
+    // Add click handlers for clickable rows
+    document.querySelectorAll('.clickable-row').forEach(row => {
+        row.addEventListener('click', () => {
+            const url = row.getAttribute('data-url');
+            if (url) {
+                window.open(url, '_blank');
+            }
+        });
+    });
 }
 
 function addTradeToList(trade, prepend = true) {
@@ -474,6 +494,20 @@ async function saveSettings() {
 // Settings button click handler
 settingsBtn.addEventListener('click', () => {
     openSettingsModal();
+});
+
+// Refresh balance button click handler
+refreshBalanceBtn.addEventListener('click', async () => {
+    refreshBalanceBtn.classList.add('spinning');
+    await fetchBalance();
+    setTimeout(() => refreshBalanceBtn.classList.remove('spinning'), 500);
+});
+
+// Refresh positions button click handler
+refreshPositionsBtn.addEventListener('click', async () => {
+    refreshPositionsBtn.classList.add('spinning');
+    await fetchPositions();
+    setTimeout(() => refreshPositionsBtn.classList.remove('spinning'), 500);
 });
 
 // Close settings modal on outside click

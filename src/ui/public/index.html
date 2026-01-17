@@ -33,6 +33,11 @@
                 </button>
                 <span id="wallet-address" class="wallet">Loading...</span>
                 <span id="balance" class="balance">$---.--</span>
+                <button class="refresh-btn" id="refresh-balance-btn" title="Refresh Balance">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
+                    </svg>
+                </button>
             </div>
         </div>
     </header>
@@ -51,7 +56,14 @@
             </section>
 
             <section class="panel positions-panel">
-                <h2>Open Positions</h2>
+                <div class="panel-header">
+                    <h2>Open Positions</h2>
+                    <button class="refresh-btn" id="refresh-positions-btn" title="Refresh Positions">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
+                        </svg>
+                    </button>
+                </div>
                 <div class="positions-summary" id="positions-summary">
                     <div class="summary-item">
                         <span class="label">Total Value</span>

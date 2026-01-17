@@ -377,6 +377,25 @@ main {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.market-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.clickable-row {
+    cursor: pointer;
+}
+
+.clickable-row:hover {
+    background-color: var(--bg-tertiary) !important;
 }
 
 .pnl-positive {
@@ -617,6 +636,48 @@ main {
 
 .settings-btn:hover svg {
     transform: rotate(45deg);
+}
+
+/* Refresh Button */
+.refresh-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+    color: var(--accent-cyan);
+    border-color: var(--accent-cyan);
+}
+
+.refresh-btn:active svg,
+.refresh-btn.spinning svg {
+    animation: spin 0.5s linear;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Panel Header */
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.panel-header h2 {
+    margin: 0;
 }
 
 /* Settings Modal */

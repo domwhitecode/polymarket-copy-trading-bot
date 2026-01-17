@@ -18,6 +18,8 @@ export interface Position {
     initialValue?: number;
     realizedPnl?: number;
     percentRealizedPnl?: number;
+    icon?: string;
+    eventSlug?: string;
 }
 
 export interface SellResult {
