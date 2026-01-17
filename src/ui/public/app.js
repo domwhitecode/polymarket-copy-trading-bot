@@ -41,6 +41,7 @@ const settingAggregation = document.getElementById('setting-aggregation');
 // Refresh buttons
 const refreshBalanceBtn = document.getElementById('refresh-balance-btn');
 const refreshPositionsBtn = document.getElementById('refresh-positions-btn');
+const refreshTradesBtn = document.getElementById('refresh-trades-btn');
 
 // Close All / Redeem buttons and modal
 const closeAllModal = document.getElementById('close-all-modal');
@@ -60,7 +61,10 @@ function formatCurrency(value) {
 }
 
 function formatTime(timestamp) {
-    const date = new Date(timestamp);
+    // Polymarket timestamps are in seconds, JS expects milliseconds
+    // Check if timestamp is in seconds (less than year 2286 in ms) and convert
+    const ts = timestamp < 10000000000 ? timestamp * 1000 : timestamp;
+    const date = new Date(ts);
     return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
@@ -70,7 +74,9 @@ function formatTime(timestamp) {
 }
 
 function formatDate(timestamp) {
-    const date = new Date(timestamp);
+    // Polymarket timestamps are in seconds, JS expects milliseconds
+    const ts = timestamp < 10000000000 ? timestamp * 1000 : timestamp;
+    const date = new Date(ts);
     const now = new Date();
 
     // Compare dates in EST
@@ -80,7 +86,7 @@ function formatDate(timestamp) {
     const isToday = dateEST === nowEST;
 
     if (isToday) {
-        return formatTime(timestamp);
+        return formatTime(ts);
     }
 
     return date.toLocaleDateString('en-US', {
@@ -307,6 +313,8 @@ function addTradeToList(trade, prepend = true) {
         });
     }
 
+    const traderDisplay = trade.traderAddress ? formatAddress(trade.traderAddress) : '';
+
     tradeEl.innerHTML = `
         <div class="trade-header">
             <span class="trade-side ${sideClass}">${trade.side || 'UNKNOWN'} ${formatCurrency(trade.usdcSize || 0)}</span>
@@ -316,6 +324,7 @@ function addTradeToList(trade, prepend = true) {
         <div class="trade-details">
             <span>@ ${formatCurrency(trade.price || 0)}</span>
             <span>${(trade.size || 0).toFixed(2)} tokens</span>
+            ${traderDisplay ? `<span class="trade-trader" title="${trade.traderAddress}">Wallet: ${traderDisplay}</span>` : ''}
         </div>
     `;
 
@@ -649,6 +658,13 @@ refreshPositionsBtn.addEventListener('click', async () => {
     refreshPositionsBtn.classList.add('spinning');
     await fetchPositions();
     setTimeout(() => refreshPositionsBtn.classList.remove('spinning'), 500);
+});
+
+// Refresh trades button click handler
+refreshTradesBtn.addEventListener('click', async () => {
+    refreshTradesBtn.classList.add('spinning');
+    await fetchRecentTrades();
+    setTimeout(() => refreshTradesBtn.classList.remove('spinning'), 500);
 });
 
 // Sortable column headers

@@ -45,7 +45,16 @@
     <main>
         <div class="container">
             <section class="panel trades-panel">
-                <h2>Recent Trades</h2>
+                <div class="panel-header">
+                    <h2>Recent Trades</h2>
+                    <div class="panel-actions">
+                        <button class="refresh-btn" id="refresh-trades-btn" title="Refresh Trades">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
                 <div class="connection-status" id="connection-status">
                     <span class="status-dot disconnected"></span>
                     <span>Disconnected</span>
