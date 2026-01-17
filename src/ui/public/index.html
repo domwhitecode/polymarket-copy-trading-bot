@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PolyCopy Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>PolyCopy Dashboard</h1>
+            <div class="header-info">
+                <div class="traders-dropdown" id="traders-dropdown">
+                    <button class="traders-btn" id="traders-btn">
+                        <span>Tracking <span id="traders-count">0</span> traders</span>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                            <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                        </svg>
+                    </button>
+                    <div class="traders-menu" id="traders-menu">
+                        <div class="traders-menu-header">Tracked Wallets</div>
+                        <div class="traders-list" id="traders-list">
+                            <p class="empty-state">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+                <button class="settings-btn" id="settings-btn" title="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
+                    </svg>
+                </button>
+                <span id="wallet-address" class="wallet">Loading...</span>
+                <span id="balance" class="balance">$---.--</span>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <section class="panel trades-panel">
+                <h2>Recent Trades</h2>
+                <div class="connection-status" id="connection-status">
+                    <span class="status-dot disconnected"></span>
+                    <span>Disconnected</span>
+                </div>
+                <div class="trades-list" id="trades-list">
+                    <p class="empty-state">No trades yet</p>
+                </div>
+            </section>
+
+            <section class="panel positions-panel">
+                <h2>Open Positions</h2>
+                <div class="positions-summary" id="positions-summary">
+                    <div class="summary-item">
+                        <span class="label">Total Value</span>
+                        <span class="value" id="total-value">$0.00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Total PnL</span>
+                        <span class="value" id="total-pnl">$0.00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">Positions</span>
+                        <span class="value" id="position-count">0</span>
+                    </div>
+                </div>
+                <div class="positions-table-container">
+                    <table class="positions-table" id="positions-table">
+                        <thead>
+                            <tr>
+                                <th>Market</th>
+                                <th>Outcome</th>
+                                <th>Size</th>
+                                <th>Value</th>
+                                <th>PnL</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="positions-body">
+                            <tr>
+                                <td colspan="6" class="empty-state">Loading positions...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settings-modal">
+        <div class="modal-content settings-modal-content">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <button class="close-btn" onclick="closeSettingsModal()">&times;</button>
+            </div>
+            <div class="modal-body settings-body">
+                <div class="settings-warning">
+                    Changes require restarting the bot (npm run dev) to take effect.
+                </div>
+
+                <div class="form-group">
+                    <label for="setting-user-addresses">Traders to Copy</label>
+                    <textarea id="setting-user-addresses" rows="3" placeholder="0x123..., 0x456..."></textarea>
+                    <small>Comma-separated wallet addresses</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="setting-copy-strategy">Copy Strategy</label>
+                        <select id="setting-copy-strategy">
+                            <option value="PERCENTAGE">PERCENTAGE</option>
+                            <option value="FIXED">FIXED</option>
+                            <option value="ADAPTIVE">ADAPTIVE</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="setting-copy-size">Copy Size</label>
+                        <input type="number" id="setting-copy-size" step="0.1" min="0" placeholder="10.0">
+                        <small>% for PERCENTAGE, $ for FIXED</small>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="setting-trade-multiplier">Trade Multiplier</label>
+                        <input type="number" id="setting-trade-multiplier" step="0.1" min="0" placeholder="1.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="setting-max-order">Max Order Size ($)</label>
+                        <input type="number" id="setting-max-order" step="1" min="1" placeholder="100">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="setting-min-order">Min Order Size ($)</label>
+                        <input type="number" id="setting-min-order" step="0.1" min="0" placeholder="1.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="setting-fetch-interval">Fetch Interval (sec)</label>
+                        <input type="number" id="setting-fetch-interval" step="1" min="1" placeholder="1">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="setting-retry-limit">Retry Limit</label>
+                        <input type="number" id="setting-retry-limit" step="1" min="1" max="10" placeholder="3">
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="setting-aggregation">
+                            <span>Enable Trade Aggregation</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSettingsModal()">Cancel</button>
+                <button class="btn btn-primary" id="save-settings-btn" onclick="saveSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Close Position Modal -->
+    <div class="modal" id="close-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Close Position</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="modal-market-info"></p>
+                <div class="form-group">
+                    <label for="close-percentage">Percentage to close:</label>
+                    <div class="percentage-input-group">
+                        <input type="number" id="close-percentage" min="1" max="100" value="100">
+                        <span>%</span>
+                    </div>
+                </div>
+                <div class="quick-buttons">
+                    <button onclick="setPercentage(25)">25%</button>
+                    <button onclick="setPercentage(50)">50%</button>
+                    <button onclick="setPercentage(75)">75%</button>
+                    <button onclick="setPercentage(100)">100%</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-danger" id="confirm-close-btn" onclick="confirmClose()">Close Position</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
