@@ -14,7 +14,11 @@ const COPY_PERCENTAGE = ENV.COPY_PERCENTAGE;
 
 // Polymarket minimum order sizes
 const MIN_ORDER_SIZE_USD = 1.0; // Minimum order size in USD for BUY orders
-const MIN_ORDER_SIZE_TOKENS = 1.0; // Minimum order size in tokens for SELL/MERGE orders
+const MIN_ORDER_SIZE_TOKENS = 0.01; // Minimum order size in tokens for SELL/MERGE orders
+
+// Thresholds for considering a market "resolved"
+const RESOLVED_HIGH = 0.99; // Market resolved in favor of this outcome (price ~$1)
+const RESOLVED_LOW = 0.01; // Market resolved against this outcome (price ~$0)
 
 const extractOrderError = (response: unknown): string | undefined => {
     if (!response) {
@@ -61,6 +65,15 @@ const isInsufficientBalanceOrAllowanceError = (message: string | undefined): boo
     }
     const lower = message.toLowerCase();
     return lower.includes('not enough balance') || lower.includes('allowance');
+};
+
+/**
+ * Check if a market is resolved based on its current price
+ * @param price The current market price
+ * @returns true if the market is resolved (price >= 0.99 or <= 0.01)
+ */
+const isMarketResolved = (price: number): boolean => {
+    return price >= RESOLVED_HIGH || price <= RESOLVED_LOW;
 };
 
 const postOrder = async (
@@ -213,8 +226,20 @@ const postOrder = async (
                 return parseFloat(ask.price) < parseFloat(min.price) ? ask : min;
             }, orderBook.asks[0]);
 
-            Logger.info(`Best ask: ${minPriceAsk.size} @ $${minPriceAsk.price}`);
-            if (parseFloat(minPriceAsk.price) - 0.05 > trade.price) {
+            const askPrice = parseFloat(minPriceAsk.price);
+            Logger.info(`Best ask: ${minPriceAsk.size} @ $${askPrice}`);
+
+            // Check if market is resolved before attempting to buy
+            if (isMarketResolved(askPrice)) {
+                const status = askPrice >= RESOLVED_HIGH ? 'resolved (won)' : 'resolved (lost)';
+                Logger.warning(
+                    `⚠️  Market is ${status} (price: $${askPrice.toFixed(4)}) - skipping buy order`
+                );
+                await UserActivity.updateOne({ _id: trade._id }, { bot: true });
+                break;
+            }
+
+            if (askPrice - 0.1 > trade.price && askPrice > 0.5) {
                 Logger.warning('Price slippage too high - skipping trade');
                 await UserActivity.updateOne({ _id: trade._id }, { bot: true });
                 break;
