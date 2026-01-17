@@ -39,6 +39,13 @@ const settingAggregation = document.getElementById('setting-aggregation');
 const refreshBalanceBtn = document.getElementById('refresh-balance-btn');
 const refreshPositionsBtn = document.getElementById('refresh-positions-btn');
 
+// Close All / Redeem buttons and modal
+const closeAllModal = document.getElementById('close-all-modal');
+const closeAllInfoEl = document.getElementById('close-all-info');
+const confirmCloseAllBtn = document.getElementById('confirm-close-all-btn');
+const closeAllBtn = document.getElementById('close-all-btn');
+const redeemResolvedBtn = document.getElementById('redeem-resolved-btn');
+
 // Utility functions
 function formatAddress(address) {
     if (!address) return 'Unknown';
@@ -405,6 +412,9 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && settingsModal.classList.contains('active')) {
         closeSettingsModal();
     }
+    if (e.key === 'Escape' && closeAllModal.classList.contains('active')) {
+        closeCloseAllModal();
+    }
 });
 
 // Settings modal functions
@@ -508,6 +518,85 @@ refreshPositionsBtn.addEventListener('click', async () => {
     refreshPositionsBtn.classList.add('spinning');
     await fetchPositions();
     setTimeout(() => refreshPositionsBtn.classList.remove('spinning'), 500);
+});
+
+// Redeem resolved positions
+redeemResolvedBtn.addEventListener('click', async () => {
+    redeemResolvedBtn.disabled = true;
+    redeemResolvedBtn.textContent = 'Redeeming...';
+
+    try {
+        const response = await fetch('/api/positions/redeem-resolved', {
+            method: 'POST',
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            alert(result.message || 'Positions redeemed successfully');
+            fetchPositions();
+            fetchBalance();
+        } else {
+            alert(`Failed to redeem: ${result.error || 'Unknown error'}`);
+        }
+    } catch (error) {
+        console.error('Error redeeming positions:', error);
+        alert('Error redeeming positions. Please try again.');
+    } finally {
+        redeemResolvedBtn.disabled = false;
+        redeemResolvedBtn.textContent = 'Redeem Resolved';
+    }
+});
+
+// Close All button - open confirmation modal
+closeAllBtn.addEventListener('click', () => {
+    if (positions.length === 0) {
+        alert('No positions to close');
+        return;
+    }
+
+    const totalValue = positions.reduce((sum, p) => sum + (p.currentValue || 0), 0);
+    closeAllInfoEl.textContent = `You have ${positions.length} position(s) with a total value of ${formatCurrency(totalValue)}.`;
+    closeAllModal.classList.add('active');
+});
+
+// Close All modal functions
+function closeCloseAllModal() {
+    closeAllModal.classList.remove('active');
+}
+
+async function confirmCloseAll() {
+    confirmCloseAllBtn.disabled = true;
+    confirmCloseAllBtn.textContent = 'Closing...';
+
+    try {
+        const response = await fetch('/api/positions/close-all', {
+            method: 'POST',
+        });
+        const result = await response.json();
+
+        closeCloseAllModal();
+
+        if (result.success) {
+            alert(result.message || 'All positions closed successfully');
+            fetchPositions();
+            fetchBalance();
+        } else {
+            alert(`Failed to close all: ${result.error || 'Unknown error'}\nClosed: ${result.closedCount}, Failed: ${result.failedCount}`);
+        }
+    } catch (error) {
+        console.error('Error closing all positions:', error);
+        alert('Error closing positions. Please try again.');
+    } finally {
+        confirmCloseAllBtn.disabled = false;
+        confirmCloseAllBtn.textContent = 'Close All Positions';
+    }
+}
+
+// Close all modal on outside click
+closeAllModal.addEventListener('click', (e) => {
+    if (e.target === closeAllModal) {
+        closeCloseAllModal();
+    }
 });
 
 // Close settings modal on outside click

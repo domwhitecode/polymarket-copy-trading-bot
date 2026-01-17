@@ -448,6 +448,40 @@ main {
     cursor: not-allowed;
 }
 
+.btn-sm {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+.btn-success {
+    background-color: var(--accent-green);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #2ea043;
+}
+
+.panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.warning-message {
+    background-color: rgba(248, 81, 73, 0.15);
+    border: 1px solid var(--accent-red);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    color: var(--accent-red);
+}
+
+.confirm-text {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
 .empty-state {
     color: var(--text-secondary);
     text-align: center;

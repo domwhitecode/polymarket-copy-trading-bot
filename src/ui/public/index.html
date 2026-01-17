@@ -58,11 +58,19 @@
             <section class="panel positions-panel">
                 <div class="panel-header">
                     <h2>Open Positions</h2>
-                    <button class="refresh-btn" id="refresh-positions-btn" title="Refresh Positions">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
-                        </svg>
-                    </button>
+                    <div class="panel-actions">
+                        <button class="btn btn-sm btn-success" id="redeem-resolved-btn" title="Redeem Resolved Positions">
+                            Redeem Resolved
+                        </button>
+                        <button class="btn btn-sm btn-danger" id="close-all-btn" title="Close All Positions">
+                            Close All
+                        </button>
+                        <button class="refresh-btn" id="refresh-positions-btn" title="Refresh Positions">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="positions-summary" id="positions-summary">
                     <div class="summary-item">
@@ -203,6 +211,27 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
                 <button class="btn btn-danger" id="confirm-close-btn" onclick="confirmClose()">Close Position</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Close All Confirmation Modal -->
+    <div class="modal" id="close-all-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Close All Positions</h3>
+                <button class="close-btn" onclick="closeCloseAllModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="warning-message">
+                    <strong>Warning:</strong> This will close ALL open positions at 100%.
+                </div>
+                <p id="close-all-info"></p>
+                <p class="confirm-text">Are you sure you want to proceed?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCloseAllModal()">Cancel</button>
+                <button class="btn btn-danger" id="confirm-close-all-btn" onclick="confirmCloseAll()">Close All Positions</button>
             </div>
         </div>
     </div>

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { fetchPositions, closePosition } from '../services/positionService';
+import { redeemAllResolved, getRedeemablePositions } from '../services/redeemService';
 
 const router = Router();
 
@@ -79,6 +80,140 @@ router.post('/:asset/close', async (req, res) => {
         console.error('Error closing position:', error);
         res.status(500).json({
             error: 'Failed to close position',
+            message: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+});
+
+// GET /api/positions/redeemable - Get count of redeemable positions
+router.get('/redeemable', async (req, res) => {
+    try {
+        const { redeemable, total, totalValue } = await getRedeemablePositions();
+        res.json({
+            count: total,
+            totalValue,
+            positions: redeemable.map(p => ({
+                title: p.title,
+                outcome: p.outcome,
+                size: p.size,
+                currentValue: p.currentValue,
+                curPrice: p.curPrice,
+            })),
+        });
+    } catch (error) {
+        console.error('Error fetching redeemable positions:', error);
+        res.status(500).json({
+            error: 'Failed to fetch redeemable positions',
+            message: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+});
+
+// POST /api/positions/redeem-resolved - Redeem all resolved positions
+router.post('/redeem-resolved', async (req, res) => {
+    try {
+        const result = await redeemAllResolved();
+
+        if (result.success) {
+            res.json({
+                success: true,
+                redeemedCount: result.redeemedCount,
+                failedCount: result.failedCount,
+                totalValue: result.totalValue,
+                details: result.details,
+                message: result.redeemedCount > 0
+                    ? `Redeemed ${result.redeemedCount} positions for ~$${result.totalValue.toFixed(2)}`
+                    : 'No positions to redeem',
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                error: result.error,
+                redeemedCount: result.redeemedCount,
+                failedCount: result.failedCount,
+                details: result.details,
+            });
+        }
+    } catch (error) {
+        console.error('Error redeeming positions:', error);
+        res.status(500).json({
+            error: 'Failed to redeem positions',
+            message: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+});
+
+// POST /api/positions/close-all - Close all positions at 100%
+router.post('/close-all', async (req, res) => {
+    try {
+        const positions = await fetchPositions();
+
+        if (positions.length === 0) {
+            return res.json({
+                success: true,
+                closedCount: 0,
+                failedCount: 0,
+                totalValue: 0,
+                message: 'No positions to close',
+            });
+        }
+
+        const results: Array<{
+            asset: string;
+            title: string;
+            success: boolean;
+            tokensSold: number;
+            value: number;
+            error?: string;
+        }> = [];
+
+        let closedCount = 0;
+        let failedCount = 0;
+        let totalValue = 0;
+
+        for (const position of positions) {
+            const result = await closePosition(position.asset, 100);
+
+            if (result.success) {
+                closedCount++;
+                totalValue += result.totalValue;
+                results.push({
+                    asset: position.asset,
+                    title: position.title,
+                    success: true,
+                    tokensSold: result.tokensSold,
+                    value: result.totalValue,
+                });
+            } else {
+                failedCount++;
+                results.push({
+                    asset: position.asset,
+                    title: position.title,
+                    success: false,
+                    tokensSold: result.tokensSold,
+                    value: result.totalValue,
+                    error: result.error,
+                });
+            }
+
+            // Small delay between closes
+            if (positions.length > 1) {
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+        }
+
+        res.json({
+            success: closedCount > 0 || positions.length === 0,
+            closedCount,
+            failedCount,
+            totalValue,
+            details: results,
+            message: `Closed ${closedCount}/${positions.length} positions for $${totalValue.toFixed(2)}`,
+        });
+    } catch (error) {
+        console.error('Error closing all positions:', error);
+        res.status(500).json({
+            error: 'Failed to close all positions',
             message: error instanceof Error ? error.message : 'Unknown error',
         });
     }
