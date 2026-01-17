@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import { AssetType, ClobClient, OrderType, Side } from '@polymarket/clob-client';
 import { SignatureType } from '@polymarket/order-utils';
+import * as readline from 'readline';
 import { ENV } from '../config/env';
 
 const PROXY_WALLET = ENV.PROXY_WALLET;
@@ -10,9 +11,20 @@ const RPC_URL = ENV.RPC_URL;
 const POLYGON_CHAIN_ID = 137;
 const RETRY_LIMIT = ENV.RETRY_LIMIT;
 
-// Market search query
-const MARKET_SEARCH_QUERY = 'Maduro out in 2025';
-const SELL_PERCENTAGE = 0.7; // 70%
+// Create readline interface for user input
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+});
+
+// Helper function for async prompts
+function question(prompt: string): Promise<string> {
+    return new Promise((resolve) => {
+        rl.question(prompt, (answer) => {
+            resolve(answer.trim());
+        });
+    });
+}
 
 interface Position {
     asset: string;
@@ -22,6 +34,9 @@ interface Position {
     currentValue: number;
     title: string;
     outcome: string;
+    cashPnl?: number;
+    percentPnl?: number;
+    curPrice?: number;
 }
 
 const isGnosisSafe = async (
@@ -89,8 +104,53 @@ const fetchPositions = async (): Promise<Position[]> => {
     return response.json();
 };
 
-const findMatchingPosition = (positions: Position[], searchQuery: string): Position | undefined => {
-    return positions.find((pos) => pos.title.toLowerCase().includes(searchQuery.toLowerCase()));
+const displayPositions = (positions: Position[]): void => {
+    console.log('\n📊 Available Positions:\n');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    positions.forEach((pos, idx) => {
+        const pnlInfo = pos.cashPnl !== undefined && pos.percentPnl !== undefined
+            ? ` | PnL: $${pos.cashPnl.toFixed(2)} (${pos.percentPnl.toFixed(2)}%)`
+            : '';
+        const currentPrice = pos.curPrice !== undefined
+            ? ` | Current: $${pos.curPrice.toFixed(4)}`
+            : '';
+        
+        console.log(`${idx + 1}. ${pos.title || 'Unknown Market'}`);
+        console.log(`   Outcome: ${pos.outcome || 'Unknown'}`);
+        console.log(`   Size: ${pos.size.toFixed(2)} tokens | Value: $${pos.currentValue.toFixed(2)}${currentPrice}${pnlInfo}`);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    });
+    
+    console.log('');
+};
+
+const selectPosition = async (positions: Position[]): Promise<Position> => {
+    while (true) {
+        const input = await question(`\nSelect a position (1-${positions.length}): `);
+        const selection = parseInt(input, 10);
+        
+        if (isNaN(selection) || selection < 1 || selection > positions.length) {
+            console.log(`❌ Invalid selection. Please enter a number between 1 and ${positions.length}.`);
+            continue;
+        }
+        
+        return positions[selection - 1];
+    }
+};
+
+const getSellPercentage = async (): Promise<number> => {
+    while (true) {
+        const input = await question('Enter sell percentage (0-100): ');
+        const percentage = parseFloat(input);
+        
+        if (isNaN(percentage) || percentage < 0 || percentage > 100) {
+            console.log('❌ Invalid percentage. Please enter a number between 0 and 100.');
+            continue;
+        }
+        
+        return percentage / 100; // Convert to decimal
+    }
 };
 
 const updatePolymarketCache = async (clobClient: ClobClient, tokenId: string) => {
@@ -108,12 +168,12 @@ const updatePolymarketCache = async (clobClient: ClobClient, tokenId: string) =>
     }
 };
 
-const sellPosition = async (clobClient: ClobClient, position: Position, sellSize: number) => {
+const sellPosition = async (clobClient: ClobClient, position: Position, sellSize: number, sellPercentage: number) => {
     let remaining = sellSize;
     let retry = 0;
 
     console.log(
-        `\n🔄 Starting to sell ${sellSize.toFixed(2)} tokens (${(SELL_PERCENTAGE * 100).toFixed(0)}% of position)`
+        `\n🔄 Starting to sell ${sellSize.toFixed(2)} tokens (${(sellPercentage * 100).toFixed(0)}% of position)`
     );
     console.log(`Token ID: ${position.asset}`);
     console.log(`Market: ${position.title} - ${position.outcome}\n`);
@@ -242,9 +302,7 @@ const extractOrderError = (response: unknown): string | undefined => {
 async function main() {
     console.log('🚀 Manual Sell Script');
     console.log('═══════════════════════════════════════════════\n');
-    console.log(`📍 Wallet: ${PROXY_WALLET}`);
-    console.log(`🔍 Searching for: "${MARKET_SEARCH_QUERY}"`);
-    console.log(`📊 Sell percentage: ${(SELL_PERCENTAGE * 100).toFixed(0)}%\n`);
+    console.log(`📍 Wallet: ${PROXY_WALLET}\n`);
 
     try {
         // Create provider and client
@@ -256,53 +314,72 @@ async function main() {
         // Get all positions
         console.log('📥 Fetching positions...');
         const positions = await fetchPositions();
-        console.log(`Found ${positions.length} position(s)\n`);
-
-        // Find matching position
-        const position = findMatchingPosition(positions, MARKET_SEARCH_QUERY);
-
-        if (!position) {
-            console.log(`❌ Position "${MARKET_SEARCH_QUERY}" not found!`);
-            console.log('\nAvailable positions:');
-            positions.forEach((pos, idx) => {
-                console.log(
-                    `${idx + 1}. ${pos.title} - ${pos.outcome} (${pos.size.toFixed(2)} tokens)`
-                );
-            });
-            process.exit(1);
+        
+        if (positions.length === 0) {
+            console.log('❌ No positions found!');
+            rl.close();
+            process.exit(0);
         }
 
-        console.log('✅ Position found!');
+        console.log(`Found ${positions.length} position(s)`);
+
+        // Display positions in numbered list
+        displayPositions(positions);
+
+        // Get user selection
+        const position = await selectPosition(positions);
+
+        console.log('\n✅ Position selected!');
         console.log(`📌 Market: ${position.title}`);
         console.log(`📌 Outcome: ${position.outcome}`);
         console.log(`📌 Position size: ${position.size.toFixed(2)} tokens`);
         console.log(`📌 Average price: $${position.avgPrice.toFixed(4)}`);
         console.log(`📌 Current value: $${position.currentValue.toFixed(2)}`);
 
+        // Get sell percentage from user
+        const sellPercentage = await getSellPercentage();
+
         // Calculate sell size
-        const sellSize = position.size * SELL_PERCENTAGE;
+        const sellSize = position.size * sellPercentage;
 
         if (sellSize < 1.0) {
             console.log(
                 `\n❌ Sell size (${sellSize.toFixed(2)} tokens) is below minimum (1.0 token)`
             );
-            console.log('Please increase your position or adjust SELL_PERCENTAGE');
+            console.log('Please increase your position or adjust the sell percentage');
+            rl.close();
             process.exit(1);
         }
 
+        // Confirm before selling
+        console.log(`\n⚠️  You are about to sell ${sellSize.toFixed(2)} tokens (${(sellPercentage * 100).toFixed(0)}% of position)`);
+        const confirm = await question('Type "yes" to confirm: ');
+        
+        if (confirm.toLowerCase() !== 'yes') {
+            console.log('\n❌ Sale cancelled.');
+            rl.close();
+            process.exit(0);
+        }
+
         // Sell position
-        await sellPosition(clobClient, position, sellSize);
+        await sellPosition(clobClient, position, sellSize, sellPercentage);
 
         console.log('\n✅ Script completed!');
+        rl.close();
     } catch (error) {
         console.error('\n❌ Fatal error:', error);
+        rl.close();
         process.exit(1);
     }
 }
 
 main()
-    .then(() => process.exit(0))
+    .then(() => {
+        rl.close();
+        process.exit(0);
+    })
     .catch((error) => {
         console.error('❌ Unhandled error:', error);
+        rl.close();
         process.exit(1);
     });
