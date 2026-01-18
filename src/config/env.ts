@@ -345,6 +345,14 @@ export const ENV = {
         process.env.TRADE_AGGREGATION_WINDOW_SECONDS || '300',
         10
     ), // 5 minutes default
+    // WebSocket settings for real-time trade detection
+    USE_WEBSOCKET: process.env.USE_WEBSOCKET !== 'false', // Default: true
+    WS_RECONNECT_ATTEMPTS: parseInt(process.env.WS_RECONNECT_ATTEMPTS || '10', 10),
+    WS_RECONNECT_DELAY: parseInt(process.env.WS_RECONNECT_DELAY || '1000', 10),
+    // Cache settings for reducing API calls
+    CACHE_POSITIONS_TTL: parseInt(process.env.CACHE_POSITIONS_TTL || '10000', 10),
+    CACHE_BALANCE_TTL: parseInt(process.env.CACHE_BALANCE_TTL || '10000', 10),
+    CACHE_ORDERBOOK_TTL: parseInt(process.env.CACHE_ORDERBOOK_TTL || '3000', 10),
     MONGO_URI: process.env.MONGO_URI as string,
     RPC_URL: process.env.RPC_URL as string,
     USDC_CONTRACT_ADDRESS: process.env.USDC_CONTRACT_ADDRESS as string,

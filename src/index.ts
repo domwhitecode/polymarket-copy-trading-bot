@@ -3,11 +3,13 @@ import { ENV } from './config/env';
 import createClobClient from './utils/createClobClient';
 import tradeExecutor, { stopTradeExecutor } from './services/tradeExecutor';
 import tradeMonitor, { stopTradeMonitor } from './services/tradeMonitor';
+import { wsTradeMonitor } from './services/wsTradeMonitor';
 import Logger from './utils/logger';
 import { performHealthCheck, logHealthCheck } from './utils/healthCheck';
 
 const USER_ADDRESSES = ENV.USER_ADDRESSES;
 const PROXY_WALLET = ENV.PROXY_WALLET;
+const USE_WEBSOCKET = ENV.USE_WEBSOCKET;
 
 // Graceful shutdown handler
 let isShuttingDown = false;
@@ -26,6 +28,7 @@ const gracefulShutdown = async (signal: string) => {
         // Stop services
         stopTradeMonitor();
         stopTradeExecutor();
+        wsTradeMonitor.disconnect();
 
         // Give services time to finish current operations
         Logger.info('Waiting for services to finish current operations...');
@@ -91,8 +94,28 @@ export const main = async () => {
         Logger.success('CLOB client ready');
 
         Logger.separator();
-        Logger.info('Starting trade monitor...');
-        tradeMonitor();
+
+        // Start trade detection - WebSocket (default) or HTTP polling (fallback)
+        if (USE_WEBSOCKET) {
+            Logger.info('Starting WebSocket trade monitor (real-time)...');
+
+            // Set up fallback to HTTP polling if WebSocket fails
+            wsTradeMonitor.on('fallback', () => {
+                Logger.warning('WebSocket unavailable, starting HTTP polling...');
+                tradeMonitor();
+            });
+
+            // Connect to WebSocket
+            await wsTradeMonitor.connect();
+
+            // Also start HTTP polling as backup to catch any missed trades
+            // The HTTP monitor will skip trades already stored by WebSocket (deduped by transactionHash)
+            Logger.info('Starting HTTP trade monitor as backup...');
+            tradeMonitor();
+        } else {
+            Logger.info('Starting HTTP trade monitor (polling)...');
+            tradeMonitor();
+        }
 
         Logger.info('Starting trade executor...');
         tradeExecutor(clobClient);
