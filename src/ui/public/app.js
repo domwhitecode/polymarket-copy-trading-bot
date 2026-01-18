@@ -324,7 +324,7 @@ function addTradeToList(trade, prepend = true) {
         <div class="trade-details">
             <span>@ ${formatCurrency(trade.price || 0)}</span>
             <span>${(trade.size || 0).toFixed(2)} tokens</span>
-            ${traderDisplay ? `<span class="trade-trader" title="${trade.traderAddress}">Wallet: ${traderDisplay}</span>` : ''}
+            ${traderDisplay ? `<span class="trade-trader" title="${trade.traderAddress}">Trader: ${traderDisplay}</span>` : ''}
         </div>
     `;
 
