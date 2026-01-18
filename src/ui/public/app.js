@@ -1,11 +1,11 @@
-/* global document, window, EventSource */
+/* global document, window, EventSource, sessionStorage */
 // Auth state
 let authToken = sessionStorage.getItem('authToken') || null;
 
 // Auth helper - creates Authorization header
 function getAuthHeaders() {
     if (!authToken) return {};
-    return { 'Authorization': `Basic ${authToken}` };
+    return { Authorization: `Basic ${authToken}` };
 }
 
 // Authenticated fetch wrapper
@@ -69,7 +69,7 @@ async function handleLogin() {
     try {
         const token = btoa(`${username}:${password}`);
         const response = await fetch('/api/settings/bot-status', {
-            headers: { 'Authorization': `Basic ${token}` }
+            headers: { Authorization: `Basic ${token}` },
         });
 
         if (response.ok) {
@@ -184,7 +184,7 @@ function formatTime(timestamp) {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
-        timeZone: 'America/New_York'
+        timeZone: 'America/New_York',
     });
 }
 
@@ -210,7 +210,7 @@ function formatDate(timestamp) {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
-        timeZone: 'America/New_York'
+        timeZone: 'America/New_York',
     });
 }
 
@@ -260,7 +260,8 @@ async function fetchPositions() {
     } catch (error) {
         console.error('Error fetching positions:', error);
         if (error.message !== 'Authentication required') {
-            positionsBodyEl.innerHTML = '<tr><td colspan="6" class="empty-state">Error loading positions</td></tr>';
+            positionsBodyEl.innerHTML =
+                '<tr><td colspan="6" class="empty-state">Error loading positions</td></tr>';
         }
     }
 }
@@ -272,7 +273,7 @@ async function fetchRecentTrades() {
 
         if (data.trades && data.trades.length > 0) {
             tradesListEl.innerHTML = '';
-            data.trades.forEach(trade => addTradeToList(trade, false));
+            data.trades.forEach((trade) => addTradeToList(trade, false));
         }
     } catch (error) {
         console.error('Error fetching recent trades:', error);
@@ -300,12 +301,16 @@ function renderTraders(traders) {
         return;
     }
 
-    tradersListEl.innerHTML = traders.map(trader => `
+    tradersListEl.innerHTML = traders
+        .map(
+            (trader) => `
         <div class="trader-item">
             <span class="trader-address">${trader.address}</span>
             <a href="${trader.polymarketUrl}" target="_blank" class="trader-link">View Profile</a>
         </div>
-    `).join('');
+    `
+        )
+        .join('');
 }
 
 // Traders dropdown toggle
@@ -361,7 +366,7 @@ function sortPositions(positionsToSort) {
 }
 
 function updateSortIcons() {
-    document.querySelectorAll('.sortable').forEach(th => {
+    document.querySelectorAll('.sortable').forEach((th) => {
         th.classList.remove('asc', 'desc');
         if (th.dataset.sort === sortColumn) {
             th.classList.add(sortDirection);
@@ -373,25 +378,30 @@ function renderPositions() {
     updateSortIcons();
 
     if (positions.length === 0) {
-        positionsBodyEl.innerHTML = '<tr><td colspan="8" class="empty-state">No open positions</td></tr>';
+        positionsBodyEl.innerHTML =
+            '<tr><td colspan="8" class="empty-state">No open positions</td></tr>';
         return;
     }
 
     const sortedPositions = sortPositions(positions);
 
-    positionsBodyEl.innerHTML = sortedPositions.map(pos => {
-        const pnlValue = pos.cashPnl || 0;
-        const pnlPercent = pos.percentPnl || 0;
-        const pnlClass = getPnlClass(pnlValue);
-        const pnlSign = pnlValue >= 0 ? '+' : '';
-        const marketUrl = pos.eventSlug ? `https://polymarket.com/event/${pos.eventSlug}` : '';
-        const clickableClass = marketUrl ? 'clickable-row' : '';
-        const iconHtml = pos.icon ? `<img src="${pos.icon}" alt="" class="market-icon" onerror="this.style.display='none'">` : '';
-        const avgPrice = pos.avgPrice || 0;
-        const curPrice = pos.curPrice || 0;
-        const priceChangeClass = curPrice > avgPrice ? 'pnl-positive' : curPrice < avgPrice ? 'pnl-negative' : '';
+    positionsBodyEl.innerHTML = sortedPositions
+        .map((pos) => {
+            const pnlValue = pos.cashPnl || 0;
+            const pnlPercent = pos.percentPnl || 0;
+            const pnlClass = getPnlClass(pnlValue);
+            const pnlSign = pnlValue >= 0 ? '+' : '';
+            const marketUrl = pos.eventSlug ? `https://polymarket.com/event/${pos.eventSlug}` : '';
+            const clickableClass = marketUrl ? 'clickable-row' : '';
+            const iconHtml = pos.icon
+                ? `<img src="${pos.icon}" alt="" class="market-icon" onerror="this.style.display='none'">`
+                : '';
+            const avgPrice = pos.avgPrice || 0;
+            const curPrice = pos.curPrice || 0;
+            const priceChangeClass =
+                curPrice > avgPrice ? 'pnl-positive' : curPrice < avgPrice ? 'pnl-negative' : '';
 
-        return `
+            return `
             <tr class="${clickableClass}" data-url="${marketUrl}">
                 <td class="market-cell" title="${pos.title || 'Unknown'}">
                     ${iconHtml}
@@ -408,10 +418,11 @@ function renderPositions() {
                 </td>
             </tr>
         `;
-    }).join('');
+        })
+        .join('');
 
     // Add click handlers for clickable rows
-    document.querySelectorAll('.clickable-row').forEach(row => {
+    document.querySelectorAll('.clickable-row').forEach((row) => {
         row.addEventListener('click', () => {
             const url = row.getAttribute('data-url');
             if (url) {
@@ -472,7 +483,9 @@ function connectSSE() {
     }
 
     // EventSource doesn't support headers, pass token as query param
-    const sseUrl = authToken ? `/api/trades/stream?token=${encodeURIComponent(authToken)}` : '/api/trades/stream';
+    const sseUrl = authToken
+        ? `/api/trades/stream?token=${encodeURIComponent(authToken)}`
+        : '/api/trades/stream';
     eventSource = new EventSource(sseUrl);
 
     eventSource.addEventListener('connected', (e) => {
@@ -529,7 +542,7 @@ const closeFormError = document.getElementById('close-form-error');
 // Modal functions
 function openCloseModal(asset) {
     currentAsset = asset;
-    const position = positions.find(p => p.asset === asset);
+    const position = positions.find((p) => p.asset === asset);
 
     if (!position) {
         // Show error in a temporary way - position should always exist
@@ -613,17 +626,20 @@ async function confirmClose() {
         return;
     }
 
-    const position = positions.find(p => p.asset === currentAsset);
+    const position = positions.find((p) => p.asset === currentAsset);
     showCloseLoading(position?.title || 'Unknown');
 
     try {
-        const response = await authFetch(`/api/positions/${encodeURIComponent(currentAsset)}/close`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ percentage }),
-        });
+        const response = await authFetch(
+            `/api/positions/${encodeURIComponent(currentAsset)}/close`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ percentage }),
+            }
+        );
 
         const result = await response.json();
 
@@ -727,7 +743,7 @@ async function saveSettings() {
     };
 
     // Remove empty values
-    Object.keys(settings).forEach(key => {
+    Object.keys(settings).forEach((key) => {
         if (settings[key] === '') {
             delete settings[key];
         }
@@ -757,7 +773,10 @@ async function saveSettings() {
                 closeSettingsModal();
             }, 1500);
         } else {
-            showSettingsMessage(`Failed to save: ${result.error || result.message || 'Unknown error'}`, 'error');
+            showSettingsMessage(
+                `Failed to save: ${result.error || result.message || 'Unknown error'}`,
+                'error'
+            );
         }
     } catch (error) {
         console.error('Error saving settings:', error);
@@ -797,7 +816,7 @@ refreshTradesBtn.addEventListener('click', async () => {
 });
 
 // Sortable column headers
-document.querySelectorAll('.sortable').forEach(th => {
+document.querySelectorAll('.sortable').forEach((th) => {
     th.addEventListener('click', () => {
         const column = th.dataset.sort;
         if (sortColumn === column) {
@@ -897,7 +916,9 @@ function updateRedeemProgress(completed, total) {
 }
 
 function renderRedeemPositions(positionsData) {
-    redeemPositionsList.innerHTML = positionsData.map((pos, index) => `
+    redeemPositionsList.innerHTML = positionsData
+        .map(
+            (pos, index) => `
         <div class="close-all-position-item" data-redeem-index="${index}">
             <div class="close-all-position-info">
                 <span class="close-all-position-title" title="${pos.title}">${truncate(pos.title, 30)}</span>
@@ -907,7 +928,9 @@ function renderRedeemPositions(positionsData) {
                 <span class="status-text">Pending</span>
             </div>
         </div>
-    `).join('');
+    `
+        )
+        .join('');
 }
 
 function updateRedeemPositionStatus(index, status, value = null, error = null) {
@@ -935,7 +958,9 @@ function updateRedeemPositionStatus(index, status, value = null, error = null) {
 async function confirmRedeem() {
     showRedeemLoading();
 
-    const redeemUrl = authToken ? `/api/positions/redeem-resolved/stream?token=${encodeURIComponent(authToken)}` : '/api/positions/redeem-resolved/stream';
+    const redeemUrl = authToken
+        ? `/api/positions/redeem-resolved/stream?token=${encodeURIComponent(authToken)}`
+        : '/api/positions/redeem-resolved/stream';
     redeemEventSource = new EventSource(redeemUrl);
     let totalPositions = 0;
 
@@ -1086,7 +1111,9 @@ function updateCloseAllProgress(completed, total) {
 }
 
 function renderCloseAllPositions(positionsData) {
-    closeAllPositionsList.innerHTML = positionsData.map((pos, index) => `
+    closeAllPositionsList.innerHTML = positionsData
+        .map(
+            (pos, index) => `
         <div class="close-all-position-item" data-index="${index}">
             <div class="close-all-position-info">
                 <span class="close-all-position-title" title="${pos.title}">${truncate(pos.title, 30)}</span>
@@ -1096,7 +1123,9 @@ function renderCloseAllPositions(positionsData) {
                 <span class="status-text">Pending</span>
             </div>
         </div>
-    `).join('');
+    `
+        )
+        .join('');
 }
 
 function updatePositionStatus(index, status, value = null, error = null) {
@@ -1125,7 +1154,9 @@ function updatePositionStatus(index, status, value = null, error = null) {
 async function confirmCloseAll() {
     showCloseAllLoading();
 
-    const closeAllUrl = authToken ? `/api/positions/close-all/stream?token=${encodeURIComponent(authToken)}` : '/api/positions/close-all/stream';
+    const closeAllUrl = authToken
+        ? `/api/positions/close-all/stream?token=${encodeURIComponent(authToken)}`
+        : '/api/positions/close-all/stream';
     closeAllEventSource = new EventSource(closeAllUrl);
     let totalPositions = 0;
 
@@ -1285,7 +1316,7 @@ async function checkAuthAndInit() {
     // Check if auth is enabled by trying an API call
     try {
         const response = await fetch('/api/settings/bot-status', {
-            headers: authToken ? { 'Authorization': `Basic ${authToken}` } : {}
+            headers: authToken ? { Authorization: `Basic ${authToken}` } : {},
         });
 
         if (response.status === 401) {
