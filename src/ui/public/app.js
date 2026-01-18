@@ -1,3 +1,4 @@
+/* eslint-env browser */
 // State
 let positions = [];
 let currentAsset = null;
