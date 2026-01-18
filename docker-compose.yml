@@ -1,12 +1,7 @@
-version: '3.8'
-
 services:
   # Main trading bot with UI dashboard
   bot:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: ghcr.io/${GITHUB_REPOSITORY:-polymarket-bot}:latest
+    image: ghcr.io/domwhitecode/polymarket-copy-trading-bot:latest
     container_name: polymarket-bot
     restart: unless-stopped
     env_file:
