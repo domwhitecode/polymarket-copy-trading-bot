@@ -126,9 +126,9 @@ jobs:
             echo "Starting new containers..."
             docker compose up -d --force-recreate --remove-orphans
 
-            # Wait for health check
+            # Wait for health check (MongoDB connection can take time)
             echo "Waiting for health check..."
-            sleep 15
+            sleep 45
 
             # Verify deployment
             echo "Verifying deployment..."
