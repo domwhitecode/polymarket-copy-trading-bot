@@ -6,6 +6,7 @@ import tradeMonitor, { stopTradeMonitor } from './services/tradeMonitor';
 import { wsTradeMonitor } from './services/wsTradeMonitor';
 import Logger from './utils/logger';
 import { performHealthCheck, logHealthCheck } from './utils/healthCheck';
+import { startUIServer } from './ui/server';
 
 const USER_ADDRESSES = ENV.USER_ADDRESSES;
 const PROXY_WALLET = ENV.PROXY_WALLET;
@@ -79,6 +80,11 @@ export const main = async () => {
         
         await connectDB();
         Logger.startup(USER_ADDRESSES, PROXY_WALLET);
+
+        // Start UI dashboard server
+        Logger.info('Starting UI dashboard server...');
+        await startUIServer();
+        Logger.success('UI dashboard ready');
 
         // Perform initial health check
         Logger.info('Performing initial health check...');
