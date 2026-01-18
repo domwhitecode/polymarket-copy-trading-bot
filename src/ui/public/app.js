@@ -1,4 +1,4 @@
-/* eslint-env browser */
+/* global document, window, EventSource */
 // State
 let positions = [];
 let currentAsset = null;
@@ -851,7 +851,9 @@ async function confirmRedeem() {
         try {
             const data = JSON.parse(e.data);
             errorMsg = data.message || data.error || errorMsg;
-        } catch {}
+        } catch {
+            // Ignore JSON parse errors
+        }
 
         redeemProgressText.textContent = 'Error';
         redeemDetail.textContent = errorMsg;
@@ -1038,7 +1040,9 @@ async function confirmCloseAll() {
         try {
             const data = JSON.parse(e.data);
             errorMsg = data.message || data.error || errorMsg;
-        } catch {}
+        } catch {
+            // Ignore JSON parse errors
+        }
 
         closeAllProgressText.textContent = 'Error';
         closeAllDetail.textContent = errorMsg;
