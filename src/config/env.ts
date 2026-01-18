@@ -356,4 +356,13 @@ export const ENV = {
     MONGO_URI: process.env.MONGO_URI as string,
     RPC_URL: process.env.RPC_URL as string,
     USDC_CONTRACT_ADDRESS: process.env.USDC_CONTRACT_ADDRESS as string,
+    // UI Authentication settings
+    UI_AUTH_ENABLED: process.env.UI_AUTH_ENABLED === 'true',
+    UI_AUTH_USERNAME: process.env.UI_AUTH_USERNAME || 'admin',
+    UI_AUTH_PASSWORD: process.env.UI_AUTH_PASSWORD || '',
+    UI_WHITELIST_IPS: process.env.UI_WHITELIST_IPS
+        ? process.env.UI_WHITELIST_IPS.split(',').map((ip) => ip.trim()).filter((ip) => ip.length > 0)
+        : [],
+    // UI Server settings
+    UI_PORT: parseInt(process.env.UI_PORT || '3000', 10),
 };

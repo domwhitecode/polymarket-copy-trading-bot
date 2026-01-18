@@ -1,0 +1,64 @@
+# Dependencies - will be installed fresh in container
+node_modules
+
+# Build output - we rebuild in container
+dist
+build
+out
+
+# Environment files with secrets
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*.vim
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Test files
+coverage
+*.test.ts
+*.spec.ts
+__tests__
+jest.config.*
+
+# Documentation (not needed in production)
+docs
+*.md
+!README.md
+
+# Cache directories
+.eslintcache
+.prettiercache
+simulation_results
+trader_data_cache
+
+# CI/CD configuration (not needed in container)
+.github
+
+# Claude Code files
+.claude
+
+# Docker files (prevent recursive copy)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Development scripts
+scripts/
