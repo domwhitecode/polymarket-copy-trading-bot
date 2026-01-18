@@ -6,6 +6,7 @@ import fetchData from '../utils/fetchData';
 import getMyBalance from '../utils/getMyBalance';
 import postOrder from '../utils/postOrder';
 import Logger from '../utils/logger';
+import { cache, CACHE_KEYS, CACHE_TTL } from '../utils/cache';
 
 const USER_ADDRESSES = ENV.USER_ADDRESSES;
 const RETRY_LIMIT = ENV.RETRY_LIMIT;
@@ -160,11 +161,16 @@ const doTrading = async (clobClient: ClobClient, trades: TradeWithUser[]) => {
             transactionHash: trade.transactionHash,
         });
 
-        const my_positions: UserPositionInterface[] = await fetchData(
-            `https://data-api.polymarket.com/positions?user=${PROXY_WALLET}`
+        // Use cached positions and balance to reduce API calls
+        const my_positions: UserPositionInterface[] = await cache.get(
+            CACHE_KEYS.myPositions,
+            CACHE_TTL.positions,
+            () => fetchData(`https://data-api.polymarket.com/positions?user=${PROXY_WALLET}`)
         );
-        const user_positions: UserPositionInterface[] = await fetchData(
-            `https://data-api.polymarket.com/positions?user=${trade.userAddress}`
+        const user_positions: UserPositionInterface[] = await cache.get(
+            CACHE_KEYS.traderPositions(trade.userAddress),
+            CACHE_TTL.positions,
+            () => fetchData(`https://data-api.polymarket.com/positions?user=${trade.userAddress}`)
         );
         const my_position = my_positions.find(
             (position: UserPositionInterface) => position.conditionId === trade.conditionId
@@ -173,8 +179,12 @@ const doTrading = async (clobClient: ClobClient, trades: TradeWithUser[]) => {
             (position: UserPositionInterface) => position.conditionId === trade.conditionId
         );
 
-        // Get USDC balance
-        const my_balance = await getMyBalance(PROXY_WALLET);
+        // Get USDC balance (cached)
+        const my_balance = await cache.get(
+            CACHE_KEYS.myBalance,
+            CACHE_TTL.balance,
+            () => getMyBalance(PROXY_WALLET)
+        );
 
         // Calculate trader's total portfolio value from positions
         const user_balance = user_positions.reduce((total, pos) => {
@@ -216,11 +226,16 @@ const doAggregatedTrading = async (clobClient: ClobClient, aggregatedTrades: Agg
             await UserActivity.updateOne({ _id: trade._id }, { $set: { botExcutedTime: 1 } });
         }
 
-        const my_positions: UserPositionInterface[] = await fetchData(
-            `https://data-api.polymarket.com/positions?user=${PROXY_WALLET}`
+        // Use cached positions and balance to reduce API calls
+        const my_positions: UserPositionInterface[] = await cache.get(
+            CACHE_KEYS.myPositions,
+            CACHE_TTL.positions,
+            () => fetchData(`https://data-api.polymarket.com/positions?user=${PROXY_WALLET}`)
         );
-        const user_positions: UserPositionInterface[] = await fetchData(
-            `https://data-api.polymarket.com/positions?user=${agg.userAddress}`
+        const user_positions: UserPositionInterface[] = await cache.get(
+            CACHE_KEYS.traderPositions(agg.userAddress),
+            CACHE_TTL.positions,
+            () => fetchData(`https://data-api.polymarket.com/positions?user=${agg.userAddress}`)
         );
         const my_position = my_positions.find(
             (position: UserPositionInterface) => position.conditionId === agg.conditionId
@@ -229,8 +244,12 @@ const doAggregatedTrading = async (clobClient: ClobClient, aggregatedTrades: Agg
             (position: UserPositionInterface) => position.conditionId === agg.conditionId
         );
 
-        // Get USDC balance
-        const my_balance = await getMyBalance(PROXY_WALLET);
+        // Get USDC balance (cached)
+        const my_balance = await cache.get(
+            CACHE_KEYS.myBalance,
+            CACHE_TTL.balance,
+            () => getMyBalance(PROXY_WALLET)
+        );
 
         // Calculate trader's total portfolio value from positions
         const user_balance = user_positions.reduce((total, pos) => {
