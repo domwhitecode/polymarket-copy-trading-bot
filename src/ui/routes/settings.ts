@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
+import { pause, resume, getState } from '../../utils/botState';
 
 const router = Router();
 
@@ -179,6 +180,38 @@ router.post('/', (req, res) => {
             message: error instanceof Error ? error.message : 'Unknown error',
         });
     }
+});
+
+// GET /api/settings/bot-status - Get bot pause status
+router.get('/bot-status', (_req, res) => {
+    const state = getState();
+    res.json({
+        isPaused: state.isPaused,
+        pausedAt: state.pausedAt,
+        pausedBy: state.pausedBy,
+    });
+});
+
+// POST /api/settings/pause - Pause the bot
+router.post('/pause', (_req, res) => {
+    pause('UI Dashboard');
+    console.log('[Bot] Trading PAUSED via UI Dashboard');
+    res.json({
+        success: true,
+        message: 'Bot paused. No new buy orders will be executed.',
+        isPaused: true,
+    });
+});
+
+// POST /api/settings/resume - Resume the bot
+router.post('/resume', (_req, res) => {
+    resume();
+    console.log('[Bot] Trading RESUMED via UI Dashboard');
+    res.json({
+        success: true,
+        message: 'Bot resumed. Trading is now active.',
+        isPaused: false,
+    });
 });
 
 export default router;

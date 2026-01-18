@@ -59,16 +59,24 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction): void =
         return;
     }
 
+    // Check for token in Authorization header or query param (for SSE which doesn't support headers)
+    let authToken: string | undefined;
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Basic ')) {
-        res.setHeader('WWW-Authenticate', 'Basic realm="PolyCopy Dashboard"');
-        res.status(401).send('Authentication required');
+
+    if (authHeader && authHeader.startsWith('Basic ')) {
+        authToken = authHeader.split(' ')[1];
+    } else if (req.query.token && typeof req.query.token === 'string') {
+        // SSE connections pass token as query param
+        authToken = req.query.token;
+    }
+
+    if (!authToken) {
+        res.status(401).json({ error: 'Authentication required' });
         return;
     }
 
     try {
-        const base64 = authHeader.split(' ')[1];
-        const credentials = Buffer.from(base64, 'base64').toString();
+        const credentials = Buffer.from(authToken, 'base64').toString();
         const [username, password] = credentials.split(':');
 
         if (username === ENV.UI_AUTH_USERNAME && password === ENV.UI_AUTH_PASSWORD) {
@@ -79,8 +87,8 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction): void =
         // Invalid base64 or parsing error
     }
 
-    res.setHeader('WWW-Authenticate', 'Basic realm="PolyCopy Dashboard"');
-    res.status(401).send('Invalid credentials');
+    // Return JSON for invalid credentials
+    res.status(401).json({ error: 'Invalid credentials' });
 };
 
 app.use(authMiddleware);

@@ -25,6 +25,16 @@
                         </div>
                     </div>
                 </div>
+                <button class="pause-btn" id="pause-btn" title="Pause/Resume Trading">
+                    <svg class="play-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+                        <polygon points="5,3 19,12 5,21"></polygon>
+                    </svg>
+                    <svg class="pause-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="6" y="4" width="4" height="16"></rect>
+                        <rect x="14" y="4" width="4" height="16"></rect>
+                    </svg>
+                    <span class="pause-label">Active</span>
+                </button>
                 <button class="settings-btn" id="settings-btn" title="Settings">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="3"></circle>
@@ -300,6 +310,30 @@
             <div class="modal-footer" id="close-all-footer">
                 <button class="btn btn-secondary" onclick="closeCloseAllModal()">Cancel</button>
                 <button class="btn btn-danger" id="confirm-close-all-btn" onclick="confirmCloseAll()">Close All Positions</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal login-modal" id="login-modal">
+        <div class="modal-content login-modal-content">
+            <div class="modal-header">
+                <h3>PolyCopy Dashboard</h3>
+            </div>
+            <div class="modal-body">
+                <p class="login-subtitle">Enter your credentials to continue</p>
+                <div class="form-group">
+                    <label for="login-username">Username</label>
+                    <input type="text" id="login-username" placeholder="Enter username" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Enter password" autocomplete="current-password">
+                </div>
+                <div class="login-error" id="login-error" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary btn-full" id="login-btn" onclick="handleLogin()">Sign In</button>
             </div>
         </div>
     </div>

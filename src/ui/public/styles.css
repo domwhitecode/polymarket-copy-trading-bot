@@ -697,6 +697,52 @@ main {
     animation: pulse 1.5s infinite;
 }
 
+/* Pause Button */
+.pause-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    background-color: var(--accent-green);
+    border: 1px solid var(--accent-green);
+    border-radius: 6px;
+    color: #000;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+.pause-btn:hover {
+    background-color: #2ea043;
+    border-color: #2ea043;
+}
+
+.pause-btn.paused {
+    background-color: var(--accent-red);
+    border-color: var(--accent-red);
+}
+
+.pause-btn.paused:hover {
+    background-color: #da3633;
+    border-color: #da3633;
+}
+
+.pause-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.pause-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.pause-label {
+    min-width: 45px;
+    text-align: center;
+}
+
 /* Settings Button */
 .settings-btn {
     display: flex;
@@ -1069,4 +1115,89 @@ main {
     color: var(--text-secondary);
     padding: 1.5rem 0;
     font-size: 1rem;
+}
+
+/* Login Modal */
+.login-modal {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background-color: rgba(13, 17, 23, 0.85);
+}
+
+.login-modal.active {
+    display: flex;
+}
+
+.login-modal-content {
+    max-width: 360px;
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.login-modal .modal-header {
+    justify-content: center;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.login-modal .modal-header h3 {
+    color: var(--accent-cyan);
+    font-size: 1.4rem;
+}
+
+.login-subtitle {
+    text-align: center;
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem !important;
+    font-size: 0.9rem;
+}
+
+.login-modal .form-group {
+    margin-bottom: 1.25rem;
+}
+
+.login-modal .form-group input {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    font-size: 1rem;
+}
+
+.login-error {
+    background-color: rgba(248, 81, 73, 0.15);
+    border: 1px solid var(--accent-red);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    color: var(--accent-red);
+    font-size: 0.85rem;
+    text-align: center;
+    margin-top: 0.5rem;
+}
+
+.btn-full {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    font-size: 1rem;
+}
+
+.login-modal .modal-footer {
+    border-top: none;
+    padding-top: 0;
+}
+
+/* Blur main content when login modal is active */
+body.auth-required header,
+body.auth-required main {
+    filter: blur(8px);
+    pointer-events: none;
+    user-select: none;
 }

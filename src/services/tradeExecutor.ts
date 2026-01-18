@@ -7,6 +7,7 @@ import getMyBalance from '../utils/getMyBalance';
 import postOrder from '../utils/postOrder';
 import Logger from '../utils/logger';
 import { cache, CACHE_KEYS, CACHE_TTL } from '../utils/cache';
+import { isPaused } from '../utils/botState';
 
 const USER_ADDRESSES = ENV.USER_ADDRESSES;
 const RETRY_LIMIT = ENV.RETRY_LIMIT;
@@ -147,6 +148,15 @@ const getReadyAggregatedTrades = (): AggregatedTrade[] => {
 
 const doTrading = async (clobClient: ClobClient, trades: TradeWithUser[]) => {
     for (const trade of trades) {
+        // Check if bot is paused (only skip BUY orders, allow SELL to protect positions)
+        if (isPaused() && trade.side === 'BUY') {
+            Logger.warning(`[PAUSED] Skipping BUY order for ${trade.slug || trade.asset} - bot is paused`);
+            // Mark as processed so it doesn't keep retrying
+            const UserActivity = getUserActivityModel(trade.userAddress);
+            await UserActivity.updateOne({ _id: trade._id }, { $set: { bot: true, botExcutedTime: Date.now() } });
+            continue;
+        }
+
         // Mark trade as being processed immediately to prevent duplicate processing
         const UserActivity = getUserActivityModel(trade.userAddress);
         await UserActivity.updateOne({ _id: trade._id }, { $set: { botExcutedTime: 1 } });
@@ -214,6 +224,17 @@ const doTrading = async (clobClient: ClobClient, trades: TradeWithUser[]) => {
  */
 const doAggregatedTrading = async (clobClient: ClobClient, aggregatedTrades: AggregatedTrade[]) => {
     for (const agg of aggregatedTrades) {
+        // Check if bot is paused (only skip BUY orders, allow SELL to protect positions)
+        if (isPaused() && agg.side === 'BUY') {
+            Logger.warning(`[PAUSED] Skipping aggregated BUY order for ${agg.slug || agg.asset} - bot is paused`);
+            // Mark all trades in this aggregation as processed
+            for (const trade of agg.trades) {
+                const UserActivity = getUserActivityModel(trade.userAddress);
+                await UserActivity.updateOne({ _id: trade._id }, { $set: { bot: true, botExcutedTime: Date.now() } });
+            }
+            continue;
+        }
+
         Logger.header(`📊 AGGREGATED TRADE (${agg.trades.length} trades combined)`);
         Logger.info(`Market: ${agg.slug || agg.asset}`);
         Logger.info(`Side: ${agg.side}`);

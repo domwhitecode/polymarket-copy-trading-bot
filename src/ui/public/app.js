@@ -1,4 +1,111 @@
 /* global document, window, EventSource */
+// Auth state
+let authToken = sessionStorage.getItem('authToken') || null;
+
+// Auth helper - creates Authorization header
+function getAuthHeaders() {
+    if (!authToken) return {};
+    return { 'Authorization': `Basic ${authToken}` };
+}
+
+// Authenticated fetch wrapper
+async function authFetch(url, options = {}) {
+    const headers = {
+        ...options.headers,
+        ...getAuthHeaders(),
+    };
+    const response = await fetch(url, { ...options, headers });
+
+    if (response.status === 401) {
+        // Token invalid or expired, show login
+        authToken = null;
+        sessionStorage.removeItem('authToken');
+        showLoginModal();
+        throw new Error('Authentication required');
+    }
+
+    return response;
+}
+
+// Login modal functions
+const loginModal = document.getElementById('login-modal');
+const loginUsername = document.getElementById('login-username');
+const loginPassword = document.getElementById('login-password');
+const loginError = document.getElementById('login-error');
+const loginBtn = document.getElementById('login-btn');
+
+function showLoginModal() {
+    document.body.classList.add('auth-required');
+    loginModal.classList.add('active');
+    loginUsername.focus();
+}
+
+function hideLoginModal() {
+    document.body.classList.remove('auth-required');
+    loginModal.classList.remove('active');
+    loginError.style.display = 'none';
+    loginUsername.value = '';
+    loginPassword.value = '';
+}
+
+function showLoginError(message) {
+    loginError.textContent = message;
+    loginError.style.display = 'block';
+}
+
+async function handleLogin() {
+    const username = loginUsername.value.trim();
+    const password = loginPassword.value;
+
+    if (!username || !password) {
+        showLoginError('Please enter username and password');
+        return;
+    }
+
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'Signing in...';
+    loginError.style.display = 'none';
+
+    try {
+        const token = btoa(`${username}:${password}`);
+        const response = await fetch('/api/settings/bot-status', {
+            headers: { 'Authorization': `Basic ${token}` }
+        });
+
+        if (response.ok) {
+            // Success - store token and hide modal
+            authToken = token;
+            sessionStorage.setItem('authToken', token);
+            hideLoginModal();
+            // Initialize the app
+            init();
+        } else if (response.status === 401) {
+            showLoginError('Invalid username or password');
+        } else {
+            showLoginError('Login failed. Please try again.');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        showLoginError('Connection error. Please try again.');
+    } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Sign In';
+    }
+}
+
+// Handle Enter key in login form
+document.getElementById('login-username').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        loginPassword.focus();
+    }
+});
+
+document.getElementById('login-password').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        handleLogin();
+    }
+});
+
 // State
 let positions = [];
 let currentAsset = null;
@@ -23,6 +130,13 @@ const tradersDropdown = document.getElementById('traders-dropdown');
 const tradersBtn = document.getElementById('traders-btn');
 const tradersListEl = document.getElementById('traders-list');
 const tradersCountEl = document.getElementById('traders-count');
+
+// Pause button elements
+const pauseBtn = document.getElementById('pause-btn');
+const pauseLabel = pauseBtn.querySelector('.pause-label');
+const playIcon = pauseBtn.querySelector('.play-icon');
+const pauseIcon = pauseBtn.querySelector('.pause-icon');
+let isBotPaused = false;
 
 // Settings modal elements
 const settingsModal = document.getElementById('settings-modal');
@@ -114,21 +228,23 @@ function truncate(str, maxLength) {
 // API functions
 async function fetchBalance() {
     try {
-        const response = await fetch('/api/balance');
+        const response = await authFetch('/api/balance');
         const data = await response.json();
 
         walletEl.textContent = formatAddress(data.wallet);
         balanceEl.textContent = formatCurrency(data.balance);
     } catch (error) {
         console.error('Error fetching balance:', error);
-        walletEl.textContent = 'Error';
-        balanceEl.textContent = '$---.--';
+        if (error.message !== 'Authentication required') {
+            walletEl.textContent = 'Error';
+            balanceEl.textContent = '$---.--';
+        }
     }
 }
 
 async function fetchPositions() {
     try {
-        const response = await fetch('/api/positions');
+        const response = await authFetch('/api/positions');
         const data = await response.json();
 
         positions = data.positions || [];
@@ -143,13 +259,15 @@ async function fetchPositions() {
         renderPositions();
     } catch (error) {
         console.error('Error fetching positions:', error);
-        positionsBodyEl.innerHTML = '<tr><td colspan="6" class="empty-state">Error loading positions</td></tr>';
+        if (error.message !== 'Authentication required') {
+            positionsBodyEl.innerHTML = '<tr><td colspan="6" class="empty-state">Error loading positions</td></tr>';
+        }
     }
 }
 
 async function fetchRecentTrades() {
     try {
-        const response = await fetch('/api/trades?limit=20');
+        const response = await authFetch('/api/trades?limit=20');
         const data = await response.json();
 
         if (data.trades && data.trades.length > 0) {
@@ -163,14 +281,16 @@ async function fetchRecentTrades() {
 
 async function fetchTraders() {
     try {
-        const response = await fetch('/api/traders');
+        const response = await authFetch('/api/traders');
         const data = await response.json();
 
         tradersCountEl.textContent = data.count || 0;
         renderTraders(data.traders || []);
     } catch (error) {
         console.error('Error fetching traders:', error);
-        tradersListEl.innerHTML = '<p class="empty-state">Error loading traders</p>';
+        if (error.message !== 'Authentication required') {
+            tradersListEl.innerHTML = '<p class="empty-state">Error loading traders</p>';
+        }
     }
 }
 
@@ -351,7 +471,9 @@ function connectSSE() {
         eventSource.close();
     }
 
-    eventSource = new EventSource('/api/trades/stream');
+    // EventSource doesn't support headers, pass token as query param
+    const sseUrl = authToken ? `/api/trades/stream?token=${encodeURIComponent(authToken)}` : '/api/trades/stream';
+    eventSource = new EventSource(sseUrl);
 
     eventSource.addEventListener('connected', (e) => {
         console.log('Connected to trade stream');
@@ -495,7 +617,7 @@ async function confirmClose() {
     showCloseLoading(position?.title || 'Unknown');
 
     try {
-        const response = await fetch(`/api/positions/${encodeURIComponent(currentAsset)}/close`, {
+        const response = await authFetch(`/api/positions/${encodeURIComponent(currentAsset)}/close`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -514,7 +636,9 @@ async function confirmClose() {
         }
     } catch (error) {
         console.error('Error closing position:', error);
-        showCloseResult(false, 'Network error. Please try again.');
+        if (error.message !== 'Authentication required') {
+            showCloseResult(false, 'Network error. Please try again.');
+        }
     }
 }
 
@@ -565,7 +689,7 @@ function closeSettingsModal() {
 
 async function fetchSettings() {
     try {
-        const response = await fetch('/api/settings');
+        const response = await authFetch('/api/settings');
         const data = await response.json();
 
         if (data.settings) {
@@ -583,7 +707,9 @@ async function fetchSettings() {
         }
     } catch (error) {
         console.error('Error fetching settings:', error);
-        showSettingsMessage('Failed to load settings', 'error');
+        if (error.message !== 'Authentication required') {
+            showSettingsMessage('Failed to load settings', 'error');
+        }
     }
 }
 
@@ -612,7 +738,7 @@ async function saveSettings() {
     hideSettingsMessage();
 
     try {
-        const response = await fetch('/api/settings', {
+        const response = await authFetch('/api/settings', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -635,7 +761,9 @@ async function saveSettings() {
         }
     } catch (error) {
         console.error('Error saving settings:', error);
-        showSettingsMessage('Error saving settings. Please try again.', 'error');
+        if (error.message !== 'Authentication required') {
+            showSettingsMessage('Error saving settings. Please try again.', 'error');
+        }
     } finally {
         saveSettingsBtn.disabled = false;
         saveSettingsBtn.textContent = 'Save Settings';
@@ -717,7 +845,7 @@ redeemResolvedBtn.addEventListener('click', async () => {
 
     // Fetch redeemable positions
     try {
-        const response = await fetch('/api/positions/redeemable');
+        const response = await authFetch('/api/positions/redeemable');
         const data = await response.json();
 
         if (data.count === 0) {
@@ -730,7 +858,9 @@ redeemResolvedBtn.addEventListener('click', async () => {
         }
     } catch (error) {
         console.error('Error fetching redeemable:', error);
-        redeemInfo.textContent = 'Error checking for redeemable positions.';
+        if (error.message !== 'Authentication required') {
+            redeemInfo.textContent = 'Error checking for redeemable positions.';
+        }
     }
 });
 
@@ -805,7 +935,8 @@ function updateRedeemPositionStatus(index, status, value = null, error = null) {
 async function confirmRedeem() {
     showRedeemLoading();
 
-    redeemEventSource = new EventSource('/api/positions/redeem-resolved/stream');
+    const redeemUrl = authToken ? `/api/positions/redeem-resolved/stream?token=${encodeURIComponent(authToken)}` : '/api/positions/redeem-resolved/stream';
+    redeemEventSource = new EventSource(redeemUrl);
     let totalPositions = 0;
 
     redeemEventSource.addEventListener('init', (e) => {
@@ -994,7 +1125,8 @@ function updatePositionStatus(index, status, value = null, error = null) {
 async function confirmCloseAll() {
     showCloseAllLoading();
 
-    closeAllEventSource = new EventSource('/api/positions/close-all/stream');
+    const closeAllUrl = authToken ? `/api/positions/close-all/stream?token=${encodeURIComponent(authToken)}` : '/api/positions/close-all/stream';
+    closeAllEventSource = new EventSource(closeAllUrl);
     let totalPositions = 0;
 
     closeAllEventSource.addEventListener('init', (e) => {
@@ -1077,6 +1209,53 @@ settingsModal.addEventListener('click', (e) => {
     }
 });
 
+// Pause/Resume functionality
+async function fetchBotStatus() {
+    try {
+        const response = await authFetch('/api/settings/bot-status');
+        const data = await response.json();
+        updatePauseButton(data.isPaused);
+    } catch (error) {
+        console.error('Error fetching bot status:', error);
+    }
+}
+
+function updatePauseButton(isPaused) {
+    isBotPaused = isPaused;
+    if (isPaused) {
+        pauseBtn.classList.add('paused');
+        pauseLabel.textContent = 'Paused';
+        playIcon.style.display = 'block';
+        pauseIcon.style.display = 'none';
+    } else {
+        pauseBtn.classList.remove('paused');
+        pauseLabel.textContent = 'Active';
+        playIcon.style.display = 'none';
+        pauseIcon.style.display = 'block';
+    }
+}
+
+async function togglePause() {
+    const endpoint = isBotPaused ? '/api/settings/resume' : '/api/settings/pause';
+    pauseBtn.disabled = true;
+
+    try {
+        const response = await authFetch(endpoint, { method: 'POST' });
+        const data = await response.json();
+
+        if (data.success) {
+            updatePauseButton(data.isPaused);
+        }
+    } catch (error) {
+        console.error('Error toggling pause:', error);
+    } finally {
+        pauseBtn.disabled = false;
+    }
+}
+
+// Pause button click handler
+pauseBtn.addEventListener('click', togglePause);
+
 // Initialize
 async function init() {
     // Initial data fetch
@@ -1085,6 +1264,7 @@ async function init() {
         fetchPositions(),
         fetchRecentTrades(),
         fetchTraders(),
+        fetchBotStatus(),
     ]);
 
     // Connect to SSE for real-time updates
@@ -1095,7 +1275,35 @@ async function init() {
 
     // Refresh balance every 60 seconds
     setInterval(fetchBalance, 60000);
+
+    // Refresh bot status every 10 seconds
+    setInterval(fetchBotStatus, 10000);
 }
 
-// Start the app
-init();
+// Check auth and start app
+async function checkAuthAndInit() {
+    // Check if auth is enabled by trying an API call
+    try {
+        const response = await fetch('/api/settings/bot-status', {
+            headers: authToken ? { 'Authorization': `Basic ${authToken}` } : {}
+        });
+
+        if (response.status === 401) {
+            // Auth required, show login
+            showLoginModal();
+        } else if (response.ok) {
+            // Auth not required or token valid, start app
+            init();
+        } else {
+            // Some other error, try to start anyway
+            init();
+        }
+    } catch (error) {
+        console.error('Auth check error:', error);
+        // Try to start anyway
+        init();
+    }
+}
+
+// Start the app with auth check
+checkAuthAndInit();
