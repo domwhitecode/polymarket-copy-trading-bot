@@ -110,34 +110,46 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: Date.now() });
 });
 
-// Start server
-async function startServer() {
+// Start UI server - exported for integration with main bot
+export function startUIServer(): Promise<void> {
+    return new Promise((resolve, reject) => {
+        try {
+            app.listen(PORT, () => {
+                console.log(`\n====================================`);
+                console.log(`  PolyCopy Dashboard`);
+                console.log(`  Running at: http://localhost:${PORT}`);
+                if (ENV.UI_AUTH_ENABLED) {
+                    console.log(`  Auth: Enabled (user: ${ENV.UI_AUTH_USERNAME})`);
+                } else {
+                    console.log(`  Auth: Disabled`);
+                }
+                if (ENV.UI_WHITELIST_IPS.length > 0) {
+                    console.log(`  IP Whitelist: ${ENV.UI_WHITELIST_IPS.length} IP(s)`);
+                }
+                console.log(`====================================\n`);
+                resolve();
+            });
+        } catch (error) {
+            console.error('Failed to start UI server:', error);
+            reject(error);
+        }
+    });
+}
+
+// Standalone mode - only runs when this file is executed directly
+async function startStandalone() {
     try {
-        // Connect to MongoDB
+        // Connect to MongoDB (only needed in standalone mode)
         await connectDB();
         console.log('Connected to MongoDB');
-
-        app.listen(PORT, () => {
-            console.log(`\n====================================`);
-            console.log(`  PolyCopy Dashboard`);
-            console.log(`  Running at: http://localhost:${PORT}`);
-            if (ENV.UI_AUTH_ENABLED) {
-                console.log(`  Auth: Enabled (user: ${ENV.UI_AUTH_USERNAME})`);
-            } else {
-                console.log(`  Auth: Disabled`);
-            }
-            if (ENV.UI_WHITELIST_IPS.length > 0) {
-                console.log(`  IP Whitelist: ${ENV.UI_WHITELIST_IPS.length} IP(s)`);
-            }
-            console.log(`====================================\n`);
-        });
+        await startUIServer();
     } catch (error) {
         console.error('Failed to start server:', error);
         process.exit(1);
     }
 }
 
-// Graceful shutdown
+// Graceful shutdown (only for standalone mode)
 process.on('SIGINT', async () => {
     console.log('\nShutting down...');
     await closeDB();
@@ -150,4 +162,7 @@ process.on('SIGTERM', async () => {
     process.exit(0);
 });
 
-startServer();
+// Check if running as main module (standalone mode)
+if (require.main === module) {
+    startStandalone();
+}
