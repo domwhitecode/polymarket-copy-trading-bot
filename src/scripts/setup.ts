@@ -89,7 +89,7 @@ async function setupUserAddresses(): Promise<string> {
     console.log('  • Win rate above 55%');
     console.log('  • Recent trading activity\n');
 
-    let addresses: string[] = [];
+    const addresses: string[] = [];
     let addingMore = true;
 
     while (addingMore) {
