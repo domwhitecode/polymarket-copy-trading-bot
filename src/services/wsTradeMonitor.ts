@@ -55,7 +55,9 @@ export class WebSocketTradeMonitor extends EventEmitter {
     private client: RealTimeDataClient | null = null;
     private trackedAddresses: Set<string>;
     private isConnected = false;
+    private isConnecting = false;
     private reconnectAttempts = 0;
+    private reconnectTimer: NodeJS.Timeout | null = null;
     private useFallback = false;
 
     constructor() {
@@ -75,11 +77,29 @@ export class WebSocketTradeMonitor extends EventEmitter {
             return;
         }
 
+        // Guard: Don't create multiple concurrent connections
+        if (this.isConnected || this.isConnecting) {
+            Logger.warning('[WS] Connection already in progress, skipping');
+            return;
+        }
+
+        // Cleanup any existing client before creating new one
+        if (this.client !== null) {
+            try {
+                this.client.disconnect();
+            } catch {
+                // Ignore cleanup errors
+            }
+            this.client = null;
+        }
+
+        this.isConnecting = true;
         Logger.info('[WS] Connecting to Polymarket real-time data stream...');
 
         try {
             this.client = new RealTimeDataClient({
                 onConnect: (client) => {
+                    this.isConnecting = false;
                     this.handleConnect(client);
                 },
                 onMessage: (client, message) => {
@@ -88,12 +108,13 @@ export class WebSocketTradeMonitor extends EventEmitter {
                 onStatusChange: (status) => {
                     this.handleStatusChange(status);
                 },
-                autoReconnect: true,
+                autoReconnect: false, // DISABLED: We handle reconnection ourselves to prevent duplicate connections
                 pingInterval: 30000, // 30 second ping interval
             });
 
             this.client.connect();
         } catch (error) {
+            this.isConnecting = false;
             Logger.error(`[WS] Failed to create WebSocket client: ${error}`);
             this.scheduleReconnect();
         }
@@ -140,6 +161,7 @@ export class WebSocketTradeMonitor extends EventEmitter {
             case ConnectionStatus.DISCONNECTED:
                 Logger.warning('[WS] Status: Disconnected');
                 this.isConnected = false;
+                this.isConnecting = false;
                 this.scheduleReconnect();
                 break;
         }
@@ -289,6 +311,12 @@ export class WebSocketTradeMonitor extends EventEmitter {
             return;
         }
 
+        // Clear any existing reconnect timer to prevent duplicate reconnections
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
+
         if (this.reconnectAttempts >= WS_RECONNECT_ATTEMPTS) {
             Logger.error(`[WS] Max reconnection attempts (${WS_RECONNECT_ATTEMPTS}) reached`);
             Logger.warning('[WS] Switching to HTTP polling fallback');
@@ -304,8 +332,10 @@ export class WebSocketTradeMonitor extends EventEmitter {
             `[WS] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${WS_RECONNECT_ATTEMPTS})`
         );
 
-        setTimeout(() => {
-            if (!this.useFallback) {
+        this.reconnectTimer = setTimeout(() => {
+            this.reconnectTimer = null;
+            // Additional guards before reconnecting
+            if (!this.useFallback && !this.isConnected && !this.isConnecting) {
                 this.connect();
             }
         }, delay);
@@ -315,15 +345,22 @@ export class WebSocketTradeMonitor extends EventEmitter {
      * Disconnect from WebSocket
      */
     disconnect(): void {
+        // Clear any pending reconnect timer
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
+
         if (this.client) {
             try {
                 this.client.disconnect();
-            } catch (error) {
+            } catch {
                 // Ignore disconnect errors
             }
             this.client = null;
         }
         this.isConnected = false;
+        this.isConnecting = false;
         Logger.info('[WS] Disconnected');
     }
 
@@ -345,8 +382,14 @@ export class WebSocketTradeMonitor extends EventEmitter {
      * Reset fallback mode (for testing or manual recovery)
      */
     resetFallback(): void {
+        // Clear any pending reconnect timer
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
         this.useFallback = false;
         this.reconnectAttempts = 0;
+        this.isConnecting = false;
     }
 }
 
