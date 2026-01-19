@@ -407,12 +407,12 @@ function renderPositions() {
                     ${iconHtml}
                     <span>${truncate(pos.title || 'Unknown', 25)}</span>
                 </td>
-                <td>${pos.outcome || '-'}</td>
-                <td>${(pos.size || 0).toFixed(2)}</td>
-                <td>$${avgPrice.toFixed(2)}</td>
-                <td class="${priceChangeClass}">$${curPrice.toFixed(2)}</td>
-                <td>${formatCurrency(pos.currentValue || 0)}</td>
-                <td class="${pnlClass}">${pnlSign}${formatCurrency(pnlValue)} (${pnlSign}${pnlPercent.toFixed(1)}%)</td>
+                <td data-label="Outcome">${pos.outcome || '-'}</td>
+                <td data-label="Size">${(pos.size || 0).toFixed(2)}</td>
+                <td data-label="Avg Price">$${avgPrice.toFixed(2)}</td>
+                <td data-label="Price" class="${priceChangeClass}">$${curPrice.toFixed(2)}</td>
+                <td data-label="Value">${formatCurrency(pos.currentValue || 0)}</td>
+                <td data-label="PnL" class="${pnlClass}">${pnlSign}${formatCurrency(pnlValue)} (${pnlSign}${pnlPercent.toFixed(1)}%)</td>
                 <td>
                     <button class="btn btn-close" onclick="event.stopPropagation(); openCloseModal('${pos.asset}')">Close</button>
                 </td>
