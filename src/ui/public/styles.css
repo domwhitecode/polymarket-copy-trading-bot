@@ -1201,3 +1201,390 @@ body.auth-required main {
     pointer-events: none;
     user-select: none;
 }
+
+/* ===== MOBILE RESPONSIVE STYLES ===== */
+
+/* Tablet breakpoint */
+@media (max-width: 768px) {
+    header {
+        padding: 0.75rem 1rem;
+    }
+
+    .header-content {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    header h1 {
+        font-size: 1.25rem;
+        width: 100%;
+        text-align: center;
+    }
+
+    .header-info {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .wallet {
+        display: none;
+    }
+
+    main {
+        padding: 1rem 0.75rem;
+    }
+
+    .panel {
+        padding: 1rem;
+    }
+
+    /* Summary cards stack on tablet */
+    .positions-summary {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1rem;
+    }
+
+    .summary-item .label {
+        margin-bottom: 0;
+    }
+
+    .summary-item .value {
+        font-size: 1.1rem;
+    }
+
+    /* Panel header adjustments */
+    .panel-header {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .panel-actions {
+        width: 100%;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    /* Settings modal adjustments */
+    .settings-modal-content {
+        max-width: 100%;
+        margin: 0.5rem;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .checkbox-group {
+        padding-top: 0;
+    }
+}
+
+/* Mobile breakpoint */
+@media (max-width: 480px) {
+    header {
+        padding: 0.5rem 0.75rem;
+    }
+
+    header h1 {
+        font-size: 1.1rem;
+    }
+
+    .header-info {
+        gap: 0.4rem;
+    }
+
+    /* Hide trades panel on mobile */
+    .trades-panel {
+        display: none;
+    }
+
+    /* Make buttons touch-friendly */
+    .pause-btn,
+    .traders-btn,
+    .settings-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .pause-btn {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .pause-label {
+        display: none;
+    }
+
+    .traders-btn {
+        padding: 0.5rem 0.6rem;
+        font-size: 0.8rem;
+    }
+
+    .traders-menu {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        border-radius: 16px 16px 0 0;
+        min-width: 100%;
+        max-height: 60vh;
+    }
+
+    .balance {
+        font-size: 1rem;
+    }
+
+    .refresh-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    main {
+        padding: 0.75rem 0.5rem;
+    }
+
+    .container {
+        gap: 1rem;
+    }
+
+    .panel {
+        padding: 0.75rem;
+        border-radius: 6px;
+    }
+
+    .panel h2 {
+        font-size: 1rem;
+    }
+
+    /* Positions table - card view on mobile */
+    .positions-table-container {
+        max-height: none;
+        overflow-x: visible;
+    }
+
+    .positions-table {
+        display: block;
+    }
+
+    .positions-table thead {
+        display: none;
+    }
+
+    .positions-table tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .positions-table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.25rem 0.5rem;
+        background-color: var(--bg-tertiary);
+        border-radius: 6px;
+        padding: 0.75rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .positions-table tbody tr:hover {
+        background-color: var(--bg-tertiary);
+    }
+
+    .positions-table td {
+        padding: 0.25rem 0;
+        border-bottom: none;
+        font-size: 0.8rem;
+    }
+
+    /* Market cell spans full width */
+    .positions-table td:first-child {
+        grid-column: 1 / -1;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 0.25rem;
+    }
+
+    .market-cell {
+        max-width: none;
+    }
+
+    /* Action button spans full width */
+    .positions-table td:last-child {
+        grid-column: 1 / -1;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--border-color);
+        margin-top: 0.25rem;
+    }
+
+    .positions-table td:last-child .btn {
+        width: 100%;
+    }
+
+    /* Add labels for mobile card view */
+    .positions-table td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        margin-bottom: 0.1rem;
+    }
+
+    .positions-table td:first-child::before,
+    .positions-table td:last-child::before {
+        display: none;
+    }
+
+    /* Panel actions mobile */
+    .panel-actions {
+        gap: 0.4rem;
+    }
+
+    .btn-sm {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.75rem;
+    }
+
+    /* Modal mobile styles */
+    .modal-content {
+        margin: 0;
+        border-radius: 16px 16px 0 0;
+        max-width: 100%;
+        max-height: 90vh;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+    }
+
+    .modal-body {
+        padding: 1rem;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+
+    .modal-footer {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .modal-footer .btn {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        min-height: 44px;
+    }
+
+    .quick-buttons {
+        flex-wrap: wrap;
+    }
+
+    .quick-buttons button {
+        min-height: 44px;
+    }
+
+    /* Login modal mobile */
+    .login-modal-content {
+        border-radius: 16px 16px 0 0;
+    }
+
+    .login-modal .form-group input {
+        min-height: 48px;
+    }
+
+    .btn-full {
+        min-height: 48px;
+    }
+
+    /* Close all positions list */
+    .close-all-positions-list {
+        max-height: 150px;
+    }
+
+    .close-all-position-item {
+        padding: 0.5rem;
+    }
+
+    /* Settings body scroll */
+    .settings-body {
+        max-height: 50vh;
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 360px) {
+    header h1 {
+        font-size: 1rem;
+    }
+
+    .traders-btn span:not(#traders-count) {
+        display: none;
+    }
+
+    .traders-btn #traders-count::before {
+        content: 'Tracking ';
+    }
+
+    .balance {
+        font-size: 0.9rem;
+    }
+
+    .summary-item .value {
+        font-size: 1rem;
+    }
+}
+
+/* Touch device enhancements */
+@media (hover: none) and (pointer: coarse) {
+    .btn,
+    .pause-btn,
+    .traders-btn,
+    .settings-btn,
+    .refresh-btn,
+    .close-btn,
+    .quick-buttons button {
+        min-height: 44px;
+    }
+
+    .trade-item.clickable:active {
+        background-color: #2d333b;
+        transform: translateX(2px);
+    }
+
+    .clickable-row:active {
+        background-color: var(--bg-tertiary);
+    }
+
+    /* Remove hover effects that don't work well on touch */
+    .settings-btn:hover svg {
+        transform: none;
+    }
+}
+
+/* Landscape mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    .modal-content {
+        max-height: 95vh;
+    }
+
+    .modal-body {
+        max-height: 50vh;
+    }
+
+    .settings-body {
+        max-height: 40vh;
+    }
+
+    .traders-menu {
+        max-height: 80vh;
+    }
+}
