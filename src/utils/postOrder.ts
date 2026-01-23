@@ -251,7 +251,7 @@ const postOrder = async (
                 break;
             }
 
-            if (askPrice - 0.1 > trade.price && askPrice > 0.5) {
+            if (askPrice - 0.03 > trade.price) {
                 Logger.warning('Price slippage too high - skipping trade');
                 await UserActivity.updateOne({ _id: trade._id }, { bot: true });
                 break;
